@@ -8,22 +8,28 @@ import (
 )
 
 type Product struct {
-	ID       uuid.UUID
-	Name     string
-	Price    money.Money
-	Stock    int
-	Reserved int
-	IsActive bool
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Category    string
+	Price       money.Money
+	Stock       int
+	Reserved    int
+	IsActive    bool
+	Version     int64
 }
 
-func NewProduct(id uuid.UUID, name string, price int64, stock int, isActive bool) (*Product, error) {
+func NewProduct(id uuid.UUID, name, description, category string, price int64, stock int, isActive bool) (*Product, error) {
 	product := &Product{
-		ID:       id,
-		Name:     name,
-		Price:    money.Money{Amount: price},
-		Stock:    stock,
-		IsActive: isActive,
-		Reserved: 0,
+		ID:          id,
+		Name:        name,
+		Description: description,
+		Category:    category,
+		Price:       money.Money{Amount: price},
+		Stock:       stock,
+		IsActive:    isActive,
+		Reserved:    0,
+		Version:     0,
 	}
 	if err := product.Validate(); err != nil {
 		return nil, err
@@ -49,6 +55,22 @@ func (p *Product) ChangeName(name string) error {
 		return errors.New("empty name")
 	}
 	p.Name = name
+	return nil
+}
+
+func (p *Product) ChangeDescription(description string) error {
+	if description == "" {
+		return errors.New("empty desc")
+	}
+	p.Description = description
+	return nil
+}
+
+func (p *Product) ChangeCategory(category string) error {
+	if category == "" {
+		return errors.New("empty category")
+	}
+	p.Category = category
 	return nil
 }
 

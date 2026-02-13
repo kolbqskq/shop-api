@@ -25,7 +25,7 @@ func (s *Service) CreateProduct(ctx context.Context, create DTOCreateProduct) (*
 	if err != nil {
 		return nil, errors.New("id gen server error")
 	}
-	product, err := NewProduct(id, create.Name, create.Price, create.Stock, create.IsActive)
+	product, err := NewProduct(id, create.Name, create.Description, create.Category, create.Price, create.Stock, create.IsActive)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +39,16 @@ func (s *Service) ChangeProduct(ctx context.Context, upd DTOUpdateProduct) (*Pro
 	}
 	if upd.Name != nil {
 		if err := product.ChangeName(*upd.Name); err != nil {
+			return nil, err
+		}
+	}
+	if upd.Description != nil {
+		if err := product.ChangeDescription(*upd.Description); err != nil {
+			return nil, err
+		}
+	}
+	if upd.Category != nil {
+		if err := product.ChangeCategory(*upd.Category); err != nil {
 			return nil, err
 		}
 	}
