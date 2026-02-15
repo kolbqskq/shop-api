@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type Reservation struct {
+	ProductID uuid.UUID
+	Quantity  int
+}
+
 type Product struct {
 	ID          uuid.UUID
 	Name        string
@@ -92,35 +97,4 @@ func (p *Product) ChangeStock(stock int) error {
 
 func (p *Product) ChangeIsActive(isActive bool) {
 	p.IsActive = isActive
-}
-
-func (p *Product) Reserve(amount int) error {
-	if amount <= 0 {
-		return errors.New("invalid reserve amount")
-	}
-	if !p.IsActive {
-		return errors.New("product inactive")
-	}
-	if p.Reserved+amount > p.Stock {
-		return errors.New("cant be reserved")
-	}
-	p.Reserved += amount
-	return nil
-}
-
-func (p *Product) Commit(amount int) error {
-	if p.Reserved < amount || p.Stock < amount {
-		return errors.New("invalid release")
-	}
-	p.Reserved -= amount
-	p.Stock -= amount
-	return nil
-}
-
-func (p *Product) Unreserve(amount int) error {
-	if p.Reserved < amount {
-		return errors.New("invalid unreserve")
-	}
-	p.Reserved -= amount
-	return nil
 }

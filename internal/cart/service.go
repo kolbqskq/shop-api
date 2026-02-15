@@ -10,23 +10,23 @@ import (
 )
 
 type Service struct {
-	repo           ICardRepository
-	productService IProductService
+	repo        ICardRepository
+	productRepo IProductRepository
 }
 type ServiceDeps struct {
-	Repository     ICardRepository
-	ProductService IProductService
+	Repository        ICardRepository
+	ProductRepository IProductRepository
 }
 
 func NewService(deps ServiceDeps) *Service {
 	return &Service{
-		repo:           deps.Repository,
-		productService: deps.ProductService,
+		repo:        deps.Repository,
+		productRepo: deps.ProductRepository,
 	}
 }
 
 func (s *Service) getOrCreateActiveCart(ctx context.Context, userID uuid.UUID) (*Cart, error) {
-	cart, err := s.repo.GetByUserID(ctx, userID)
+	cart, err := s.repo.GetByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, errs.ErrCartNotFound) {
 			id, err := uuid.NewV7()
@@ -37,7 +37,7 @@ func (s *Service) getOrCreateActiveCart(ctx context.Context, userID uuid.UUID) (
 			cart = NewCart(id, userID, now)
 			if err := s.repo.Save(ctx, cart); err != nil {
 				if errors.Is(err, errs.ErrCartAlreadyExist) {
-					return s.repo.GetByUserID(ctx, userID)
+					return s.repo.GetByID(ctx, userID)
 				}
 				return nil, err
 			}
@@ -59,7 +59,7 @@ func (s *Service) buildDTOCart(ctx context.Context, cart *Cart) (*DTOCart, error
 	for _, v := range cart.Items {
 		ids = append(ids, v.ProductID)
 	}
-	products, err := s.productService.GetProductByIDs(ctx, ids)
+	products, err := s.productRepo.GetByIDs(ctx, ids)
 	if err != nil {
 		return nil, err
 	}

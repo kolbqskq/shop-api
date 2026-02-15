@@ -27,7 +27,7 @@ type Cart struct {
 	Status        CartStatus
 	LastUpdatedAt time.Time
 	Items         []CartItem
-	Version       int
+	Version       int64
 }
 
 func NewCart(id uuid.UUID, userID uuid.UUID, now time.Time) *Cart {
