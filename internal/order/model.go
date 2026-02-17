@@ -2,7 +2,7 @@ package order
 
 import (
 	"errors"
-	"shop-api/pkg/money"
+	"shop-api/internal/money"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +32,11 @@ type Order struct {
 	Total     money.Money
 	CreatedAt time.Time
 	Version   int64
+}
+
+type Reservation struct {
+	ProductID uuid.UUID
+	Quantity  int
 }
 
 func NewOrder(id, userID, cartID uuid.UUID, items []OrderItem, now time.Time) (*Order, error) {

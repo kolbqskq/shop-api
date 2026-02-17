@@ -1,7 +1,7 @@
 package cart
 
 import (
-	"shop-api/pkg/money"
+	"shop-api/internal/money"
 
 	"github.com/google/uuid"
 )

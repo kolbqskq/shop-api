@@ -2,15 +2,11 @@ package product
 
 import (
 	"errors"
-	"shop-api/pkg/money"
+	"shop-api/internal/money"
+	"time"
 
 	"github.com/google/uuid"
 )
-
-type Reservation struct {
-	ProductID uuid.UUID
-	Quantity  int
-}
 
 type Product struct {
 	ID          uuid.UUID
@@ -22,6 +18,8 @@ type Product struct {
 	Reserved    int
 	IsActive    bool
 	Version     int64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func NewProduct(id uuid.UUID, name, description, category string, price int64, stock int, isActive bool) (*Product, error) {
