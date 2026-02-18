@@ -5,8 +5,15 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type DBTX interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
 
 type DbTransaction struct {
 	Tx pgx.Tx
@@ -42,7 +49,7 @@ func (tm *DbTransactionManager) WithTx(ctx context.Context, fn func(ctx context.
 		return err
 	}
 
-	txCtx := context.WithValue(ctx, txKey{}, tx)
+	txCtx := InjectTx(ctx, tx)
 
 	defer func() {
 		if r := recover(); r != nil {

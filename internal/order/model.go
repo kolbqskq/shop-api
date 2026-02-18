@@ -34,11 +34,6 @@ type Order struct {
 	Version   int64
 }
 
-type Reservation struct {
-	ProductID uuid.UUID
-	Quantity  int
-}
-
 func NewOrder(id, userID, cartID uuid.UUID, items []OrderItem, now time.Time) (*Order, error) {
 	if len(items) == 0 {
 		return nil, errors.New("cart is empty")

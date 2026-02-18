@@ -22,6 +22,11 @@ type Product struct {
 	UpdatedAt   time.Time
 }
 
+type Reservation struct {
+	ProductID uuid.UUID
+	Quantity  int
+}
+
 func NewProduct(id uuid.UUID, name, description, category string, price int64, stock int, isActive bool) (*Product, error) {
 	product := &Product{
 		ID:          id,

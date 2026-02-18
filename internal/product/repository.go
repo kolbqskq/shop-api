@@ -3,6 +3,7 @@ package product
 import (
 	"context"
 	"errors"
+	"shop-api/pkg/transaction"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +24,8 @@ func NewRepository(deps RepositoryDeps) *Repository {
 }
 
 func (r *Repository) Create(ctx context.Context, product *Product) error {
+	exec := r.executor(ctx)
+
 	query :=
 		`
 	INSERT INTO products (id, name, description, category, price, stock, is_active)
@@ -37,7 +40,7 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 		"stock":       product.Stock,
 		"is_active":   product.IsActive,
 	}
-	_, err := r.dbPool.Exec(ctx, query, args)
+	_, err := exec.Exec(ctx, query, args)
 	if err != nil {
 		return err
 	}
@@ -45,6 +48,8 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 }
 
 func (r *Repository) Update(ctx context.Context, product *Product) error {
+	exec := r.executor(ctx)
+
 	query :=
 		`
 	UPDATE products
@@ -71,7 +76,7 @@ func (r *Repository) Update(ctx context.Context, product *Product) error {
 		"version":     product.Version,
 	}
 
-	cmd, err := r.dbPool.Exec(ctx, query, args)
+	cmd, err := exec.Exec(ctx, query, args)
 	if err != nil {
 		return err
 	}
@@ -81,6 +86,111 @@ func (r *Repository) Update(ctx context.Context, product *Product) error {
 	return nil
 }
 
-func (r *Repository) Load() error {
+func (r *Repository) Reserve(ctx context.Context, products []Reservation) error {
+	exec := r.executor(ctx)
+
+	query :=
+		`
+	UPDATE products
+	SET
+		reserved = reserved + @quantity,
+		version = version + 1
+	WHERE id = @id AND is_active = TRUE AND stock - reserved >= @quantity
+	`
+	for _, v := range products {
+
+		if v.Quantity <= 0 {
+			return errors.New("invalid quantity")
+		}
+
+		args := pgx.NamedArgs{
+			"id":       v.ProductID,
+			"quantity": v.Quantity,
+		}
+
+		cmd, err := exec.Exec(ctx, query, args)
+		if err != nil {
+			return err
+		}
+		if cmd.RowsAffected() == 0 {
+			return errors.New("not enough stock")
+		}
+	}
+
 	return nil
+
+}
+
+func (r *Repository) Commit(ctx context.Context, products []Reservation) error {
+	exec := r.executor(ctx)
+
+	query :=
+		`
+	UPDATE products
+	SET
+		reserved = reserved - @quantity,
+		stock = stock - @quantity,
+		version = version +1
+	WHERE id = @id AND reserved >= @quantity
+	`
+	for _, v := range products {
+
+		if v.Quantity <= 0 {
+			return errors.New("invalid quantity")
+		}
+
+		args := pgx.NamedArgs{
+			"id":       v.ProductID,
+			"quantity": v.Quantity,
+		}
+		cmd, err := exec.Exec(ctx, query, args)
+		if err != nil {
+			return err
+		}
+
+		if cmd.RowsAffected() == 0 {
+			return errors.New("not enough reserve")
+		}
+	}
+	return nil
+}
+
+func (r *Repository) Release(ctx context.Context, products []Reservation) error {
+	exec := r.executor(ctx)
+
+	query :=
+		`
+	UPDATE products
+	SET
+		reserved = reserved - @quantity,
+		version = version +1
+	WHERE id = @id AND reserved >= @quantity
+	`
+	for _, v := range products {
+
+		if v.Quantity <= 0 {
+			return errors.New("invalid quantity")
+		}
+
+		args := pgx.NamedArgs{
+			"id":       v.ProductID,
+			"quantity": v.Quantity,
+		}
+		cmd, err := exec.Exec(ctx, query, args)
+		if err != nil {
+			return err
+		}
+
+		if cmd.RowsAffected() == 0 {
+			return errors.New("not enough reserve")
+		}
+	}
+	return nil
+}
+
+func (r *Repository) executor(ctx context.Context) transaction.DBTX {
+	if tx, ok := transaction.ExtractTx(ctx); ok {
+		return tx
+	}
+	return r.dbPool
 }

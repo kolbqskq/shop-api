@@ -65,3 +65,13 @@ func NewDatabaseConfig() *DatabaseConfig {
 		Url: getString("DATABASE_URL", ""),
 	}
 }
+
+type TestDatabaseConfig struct {
+	Url string
+}
+
+func NewTestDatabaseConfig() *DatabaseConfig {
+	return &DatabaseConfig{
+		Url: getString("TEST_DATABASE_URL", ""),
+	}
+}

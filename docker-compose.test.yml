@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: testDb
+      PGDATA: /data/postgres
+    ports:
+      - "5433:5432"

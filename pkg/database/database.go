@@ -26,3 +26,13 @@ func CreateDbPool(config *config.DatabaseConfig, logger *zerolog.Logger) *pgxpoo
 	panic(err)
 
 }
+
+func CreateTestDbPool() (*pgxpool.Pool, error) {
+	url := "postgres://test:test@localhost:5433/testDb?sslmode=disable"
+
+	dbPool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		return nil, err
+	}
+	return dbPool, nil
+}

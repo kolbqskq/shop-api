@@ -181,10 +181,10 @@ func buildDTOOrderItems(items []OrderItem) []DTOOrderItem {
 	return dtoItems
 }
 
-func buildReservationsFromCart(cart *cart.Cart) []Reservation {
-	reservations := make([]Reservation, 0, len(cart.Items))
+func buildReservationsFromCart(cart *cart.Cart) []product.Reservation {
+	reservations := make([]product.Reservation, 0, len(cart.Items))
 	for _, v := range cart.Items {
-		reservations = append(reservations, Reservation{
+		reservations = append(reservations, product.Reservation{
 			ProductID: v.ProductID,
 			Quantity:  v.Quantity,
 		})
@@ -195,10 +195,10 @@ func buildReservationsFromCart(cart *cart.Cart) []Reservation {
 	return reservations
 }
 
-func buildReservationsFromOrder(order *Order) []Reservation {
-	reservations := make([]Reservation, 0, len(order.Items))
+func buildReservationsFromOrder(order *Order) []product.Reservation {
+	reservations := make([]product.Reservation, 0, len(order.Items))
 	for _, v := range order.Items {
-		reservations = append(reservations, Reservation{
+		reservations = append(reservations, product.Reservation{
 			ProductID: v.ProductID,
 			Quantity:  v.Quantity,
 		})
