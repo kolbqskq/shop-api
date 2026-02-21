@@ -3,8 +3,10 @@ package product
 import (
 	"context"
 	"errors"
-	"shop-api/pkg/transaction"
+	"shop-api/internal/database"
+	"shop-api/internal/errs"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -24,7 +26,7 @@ func NewRepository(deps RepositoryDeps) *Repository {
 }
 
 func (r *Repository) Create(ctx context.Context, product *Product) error {
-	exec := r.executor(ctx)
+	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
@@ -48,7 +50,7 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 }
 
 func (r *Repository) Update(ctx context.Context, product *Product) error {
-	exec := r.executor(ctx)
+	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
@@ -86,21 +88,43 @@ func (r *Repository) Update(ctx context.Context, product *Product) error {
 	return nil
 }
 
-func (r *Repository) Reserve(ctx context.Context, products []Reservation) error {
-	exec := r.executor(ctx)
+func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+	DELETE FROM products WHERE id = @id AND reserved = 0
+	`
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+	cmd, err := exec.Exec(ctx, query, args)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return errors.New("can not delete")
+	}
+	return nil
+}
+
+func (r *Repository) Reserve(ctx context.Context, products []Reservation) ([]Product, error) {
+	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
 	UPDATE products
 	SET
-		reserved = reserved + @quantity,
-		version = version + 1
+		reserved = reserved + @quantity
 	WHERE id = @id AND is_active = TRUE AND stock - reserved >= @quantity
+	RETURNING id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
 	`
+	var result []Product
+
 	for _, v := range products {
 
 		if v.Quantity <= 0 {
-			return errors.New("invalid quantity")
+			return nil, errors.New("invalid quantity")
 		}
 
 		args := pgx.NamedArgs{
@@ -108,29 +132,43 @@ func (r *Repository) Reserve(ctx context.Context, products []Reservation) error 
 			"quantity": v.Quantity,
 		}
 
-		cmd, err := exec.Exec(ctx, query, args)
+		var p Product
+
+		err := exec.QueryRow(ctx, query, args).Scan(
+			&p.ID,
+			&p.Name,
+			&p.Description,
+			&p.Category,
+			&p.Price.Amount,
+			&p.Stock,
+			&p.Reserved,
+			&p.IsActive,
+			&p.Version,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		)
 		if err != nil {
-			return err
+			if err == pgx.ErrNoRows {
+				return nil, errs.ErrNotEnoughStock
+			}
+			return nil, err
 		}
-		if cmd.RowsAffected() == 0 {
-			return errors.New("not enough stock")
-		}
+		result = append(result, p)
 	}
 
-	return nil
+	return result, nil
 
 }
 
 func (r *Repository) Commit(ctx context.Context, products []Reservation) error {
-	exec := r.executor(ctx)
+	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
 	UPDATE products
 	SET
 		reserved = reserved - @quantity,
-		stock = stock - @quantity,
-		version = version +1
+		stock = stock - @quantity
 	WHERE id = @id AND reserved >= @quantity
 	`
 	for _, v := range products {
@@ -149,21 +187,20 @@ func (r *Repository) Commit(ctx context.Context, products []Reservation) error {
 		}
 
 		if cmd.RowsAffected() == 0 {
-			return errors.New("not enough reserve")
+			return errs.ErrNotEnoughStock
 		}
 	}
 	return nil
 }
 
 func (r *Repository) Release(ctx context.Context, products []Reservation) error {
-	exec := r.executor(ctx)
+	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
 	UPDATE products
 	SET
-		reserved = reserved - @quantity,
-		version = version +1
+		reserved = reserved - @quantity
 	WHERE id = @id AND reserved >= @quantity
 	`
 	for _, v := range products {
@@ -188,9 +225,171 @@ func (r *Repository) Release(ctx context.Context, products []Reservation) error 
 	return nil
 }
 
-func (r *Repository) executor(ctx context.Context) transaction.DBTX {
-	if tx, ok := transaction.ExtractTx(ctx); ok {
-		return tx
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Product, error) {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+		SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+		FROM products
+		WHERE id = @id
+	`
+	args := pgx.NamedArgs{
+		"id": id,
 	}
-	return r.dbPool
+	cmd := exec.QueryRow(ctx, query, args)
+	var p Product
+	if err := cmd.Scan(
+		&p.ID,
+		&p.Name,
+		&p.Description,
+		&p.Category,
+		&p.Price.Amount,
+		&p.Stock,
+		&p.Reserved,
+		&p.IsActive,
+		&p.Version,
+		&p.CreatedAt,
+		&p.UpdatedAt,
+	); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, errors.New("product not found")
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *Repository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]Product, error) {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+		SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+		FROM products
+		WHERE id = ANY(@ids)
+	`
+	args := pgx.NamedArgs{
+		"ids": ids,
+	}
+	rows, err := exec.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]Product, 0, len(ids))
+
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Description,
+			&p.Category,
+			&p.Price.Amount,
+			&p.Stock,
+			&p.Reserved,
+			&p.IsActive,
+			&p.Version,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(result) != len(ids) {
+		return nil, errors.New("some id not found")
+	}
+
+	return result, nil
+}
+
+func (r *Repository) List(ctx context.Context, filters ListFilters) ([]Product, error) {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+	SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+	FROM products
+	WHERE 1=1
+	`
+
+	args := pgx.NamedArgs{}
+
+	if filters.Category != nil {
+		query += " AND category = @category"
+		args["category"] = *filters.Category
+	}
+	if filters.MinPrice != nil {
+		query += " AND price >= @min_price"
+		args["min_price"] = *filters.MinPrice
+	}
+	if filters.MaxPrice != nil {
+		query += " AND price <= @max_price"
+		args["max_price"] = *filters.MaxPrice
+	}
+	if filters.IsActive != nil {
+		query += " AND is_active = @is_active"
+		args["is_active"] = *filters.IsActive
+	}
+
+	switch filters.SortBy {
+	case SortByCreatedAt:
+		query += " ORDER BY created_at"
+	case SortByName:
+		query += " ORDER BY name"
+	case SortByPrice:
+		query += " ORDER BY price"
+	default:
+		query += " ORDER BY created_at"
+	}
+	if filters.SortDesc {
+		query += " DESC"
+	} else {
+		query += " ASC"
+	}
+
+	query += " LIMIT @limit OFFSET @offset"
+	args["limit"] = filters.Limit
+	args["offset"] = filters.Offset
+
+	rows, err := exec.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []Product
+
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Description,
+			&p.Category,
+			&p.Price.Amount,
+			&p.Stock,
+			&p.Reserved,
+			&p.IsActive,
+			&p.Version,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

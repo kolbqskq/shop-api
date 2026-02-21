@@ -3,7 +3,7 @@ package cart
 import (
 	"context"
 	"errors"
-	"shop-api/pkg/errs"
+	"shop-api/internal/errs"
 	"time"
 
 	"github.com/google/uuid"

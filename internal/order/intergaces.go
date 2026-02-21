@@ -23,7 +23,7 @@ type IOrderRepository interface {
 }
 
 type IProductRepository interface {
-	Reserve(ctx context.Context, products []product.Reservation) error
+	Reserve(ctx context.Context, products []product.Reservation) ([]product.Product, error)
 	Release(ctx context.Context, products []product.Reservation) error
 	Commit(ctx context.Context, products []product.Reservation) error
 	GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*product.Product, error)

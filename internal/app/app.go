@@ -2,8 +2,8 @@ package app
 
 import (
 	"shop-api/internal/config"
+	"shop-api/internal/database"
 	"shop-api/internal/product"
-	"shop-api/pkg/database"
 	"shop-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"

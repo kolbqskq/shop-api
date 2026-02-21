@@ -45,16 +45,14 @@ func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*Order,
 		if len(cart.Items) == 0 {
 			return errors.New("empty cart")
 		}
-		ids := buildIds(cart)
-		products, err := s.productRepository.GetByIDs(ctx, ids) //Получаем продукты
+		reservations := buildReservationsFromCart(cart)
+		products, err := s.productRepository.Reserve(ctx, reservations)
 		if err != nil {
 			return err
 		}
-		reservations := buildReservationsFromCart(cart)
-		if err := s.productRepository.Reserve(ctx, reservations); err != nil {
-			return err
-		}
-		orderItems, err := buildOrderItems(cart, products)
+		productsMap := buildProductsMap(products)
+
+		orderItems, err := buildOrderItems(cart, productsMap)
 		if err != nil {
 			return err
 		}
@@ -217,7 +215,15 @@ func buildIds(cart *cart.Cart) []uuid.UUID {
 	return ids
 }
 
-func buildOrderItems(cart *cart.Cart, products map[uuid.UUID]*product.Product) ([]OrderItem, error) {
+func buildProductsMap(products []product.Product) map[uuid.UUID]product.Product {
+	res := make(map[uuid.UUID]product.Product, len(products))
+	for _, v := range products {
+		res[v.ID] = v
+	}
+	return res
+}
+
+func buildOrderItems(cart *cart.Cart, products map[uuid.UUID]product.Product) ([]OrderItem, error) {
 	orderItems := make([]OrderItem, 0, len(cart.Items))
 	for _, v := range cart.Items {
 		product, ok := products[v.ProductID]

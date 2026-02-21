@@ -2,7 +2,6 @@ package product
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 )
@@ -20,19 +19,19 @@ func NewService(deps ServiceDeps) *Service {
 	}
 }
 
-func (s *Service) CreateProduct(ctx context.Context, create DTOCreateProduct) (*Product, error) {
+func (s *Service) CreateProduct(ctx context.Context, create CreateProductRequest) (*Product, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
-		return nil, errors.New("id gen server error")
+		return nil, err
 	}
 	product, err := NewProduct(id, create.Name, create.Description, create.Category, create.Price, create.Stock, create.IsActive)
 	if err != nil {
 		return nil, err
 	}
-	return product, s.repo.Save(ctx, product)
+	return product, s.repo.Create(ctx, product)
 }
 
-func (s *Service) ChangeProduct(ctx context.Context, upd DTOUpdateProduct) (*Product, error) {
+func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (*Product, error) {
 	product, err := s.repo.GetByID(ctx, upd.ID)
 	if err != nil {
 		return nil, err
@@ -65,9 +64,40 @@ func (s *Service) ChangeProduct(ctx context.Context, upd DTOUpdateProduct) (*Pro
 	if upd.IsActive != nil {
 		product.ChangeIsActive(*upd.IsActive)
 	}
-	return product, s.repo.Save(ctx, product)
+	return product, s.repo.Update(ctx, product)
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]Product, error) {
+	limit := 20
+	if filters.Limit != nil && *filters.Limit > 0 && *filters.Limit <= 100 {
+		limit = *filters.Limit
+	}
+	offset := 0
+	if filters.Offset != nil && *filters.Offset >= 0 {
+		offset = *filters.Offset
+	}
+	sortBy := SortByCreatedAt
+	if filters.SortBy != nil {
+		sortBy = *filters.SortBy
+	}
+	sortDesc := false
+	if filters.SortDesc != nil {
+		sortDesc = *filters.SortDesc
+	}
+	filter := ListFilters{
+		Limit:    limit,
+		Offset:   offset,
+		SortBy:   sortBy,
+		SortDesc: sortDesc,
+
+		Category: filters.Category,
+		MinPrice: filters.MinPrice,
+		MaxPrice: filters.MaxPrice,
+		IsActive: filters.IsActive,
+	}
+	return s.repo.List(ctx, filter)
 }

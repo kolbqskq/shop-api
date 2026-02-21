@@ -22,3 +22,15 @@ type DTOCreateProduct struct {
 	Stock       int
 	IsActive    bool
 }
+
+type DTOListFilters struct {
+	Limit    *int
+	Offset   *int
+	SortBy   *string
+	SortDesc *bool
+
+	Category *string
+	MinPrice *int64
+	MaxPrice *int64
+	IsActive *bool
+}

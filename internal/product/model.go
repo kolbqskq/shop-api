@@ -2,6 +2,7 @@ package product
 
 import (
 	"errors"
+	"shop-api/internal/errs"
 	"shop-api/internal/money"
 	"time"
 
@@ -27,13 +28,33 @@ type Reservation struct {
 	Quantity  int
 }
 
-func NewProduct(id uuid.UUID, name, description, category string, price int64, stock int, isActive bool) (*Product, error) {
+type ProductSortField string
+
+const (
+	SortByCreatedAt ProductSortField = "created_at"
+	SortByPrice     ProductSortField = "price"
+	SortByName      ProductSortField = "name"
+)
+
+type ListFilters struct {
+	Limit    int
+	Offset   int
+	SortBy   ProductSortField
+	SortDesc bool
+
+	Category *string
+	MinPrice *int64
+	MaxPrice *int64
+	IsActive *bool
+}
+
+func NewProduct(id uuid.UUID, name, description, category string, price money.Money, stock int, isActive bool) (*Product, error) {
 	product := &Product{
 		ID:          id,
 		Name:        name,
 		Description: description,
 		Category:    category,
-		Price:       money.Money{Amount: price},
+		Price:       price,
 		Stock:       stock,
 		IsActive:    isActive,
 		Reserved:    0,
@@ -50,10 +71,10 @@ func (p *Product) Validate() error {
 		return errors.New("empty name")
 	}
 	if p.Price.Amount < 0 {
-		return errors.New("invalid price")
+		return errs.ErrInvalidPrice
 	}
 	if p.Stock < p.Reserved {
-		return errors.New("invalid stock")
+		return errs.ErrInvalidStock
 	}
 	return nil
 }
@@ -82,11 +103,11 @@ func (p *Product) ChangeCategory(category string) error {
 	return nil
 }
 
-func (p *Product) ChangePrice(price int64) error {
-	if price < 0 {
+func (p *Product) ChangePrice(price money.Money) error {
+	if price.Amount < 0 {
 		return errors.New("invalid price")
 	}
-	p.Price.Amount = price
+	p.Price = price
 	return nil
 }
 
