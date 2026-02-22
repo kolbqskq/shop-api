@@ -34,6 +34,7 @@ const (
 	SortByCreatedAt ProductSortField = "created_at"
 	SortByPrice     ProductSortField = "price"
 	SortByName      ProductSortField = "name"
+	SortByStock     ProductSortField = "stock"
 )
 
 type ListFilters struct {

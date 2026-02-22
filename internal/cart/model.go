@@ -22,22 +22,24 @@ type CartItem struct {
 }
 
 type Cart struct {
-	ID            uuid.UUID
-	UserID        uuid.UUID
-	Status        CartStatus
-	LastUpdatedAt time.Time
-	Items         []CartItem
-	Version       int64
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Status    CartStatus
+	Items     []CartItem
+	Version   int64
+	
+	CreateDAt time.Time
+	UpdatedAt time.Time
 }
 
 func NewCart(id uuid.UUID, userID uuid.UUID, now time.Time) *Cart {
 	return &Cart{
-		ID:            id,
-		UserID:        userID,
-		Status:        CartStatusActive,
-		LastUpdatedAt: now,
-		Items:         []CartItem{},
-		Version:       0,
+		ID:        id,
+		UserID:    userID,
+		Status:    CartStatusActive,
+		UpdatedAt: now,
+		Items:     []CartItem{},
+		Version:   0,
 	}
 }
 
@@ -59,7 +61,7 @@ func (c *Cart) AddItem(productID uuid.UUID, qty int, now time.Time) error {
 		Quantity:  qty,
 		AddedAt:   time.Now(),
 	})
-	c.LastUpdatedAt = now
+	c.UpdatedAt = now
 	return nil
 }
 
@@ -67,7 +69,7 @@ func (c *Cart) RemoveItem(productID uuid.UUID, now time.Time) error {
 	if c.Status != CartStatusActive {
 		return errors.New("cart inactive")
 	}
-	c.LastUpdatedAt = now
+	c.UpdatedAt = now
 	for k, v := range c.Items {
 		if v.ProductID == productID {
 			c.Items = append(c.Items[:k], c.Items[k+1:]...)
@@ -84,7 +86,7 @@ func (c *Cart) ChangeQuantityItem(productID uuid.UUID, qty int, now time.Time) e
 	if qty <= 0 {
 		return errors.New("qty should be > 0")
 	}
-	c.LastUpdatedAt = now
+	c.UpdatedAt = now
 	for k, v := range c.Items {
 		if v.ProductID == productID {
 			c.Items[k].Quantity += qty
@@ -100,5 +102,5 @@ func (c *Cart) CartDoExpired() {
 
 func (c *Cart) ClearItems(now time.Time) {
 	c.Items = []CartItem{}
-	c.LastUpdatedAt = now
+	c.UpdatedAt = now
 }

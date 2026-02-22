@@ -347,6 +347,8 @@ func (r *Repository) List(ctx context.Context, filters ListFilters) ([]Product, 
 		query += " ORDER BY name"
 	case SortByPrice:
 		query += " ORDER BY price"
+	case SortByStock:
+		query += " ORDER BY stock"
 	default:
 		query += " ORDER BY created_at"
 	}
