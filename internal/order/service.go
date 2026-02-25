@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"shop-api/internal/cart"
+	"shop-api/internal/errs"
 	"shop-api/internal/product"
-	"sort"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,25 +33,23 @@ func NewService(deps ServiceDeps) *Service {
 	}
 }
 
-func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*Order, error) {
-	var res *Order
+func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*DTOOrder, error) {
+	var order *Order
 
 	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		cart, err := s.cartRepo.GetByUserID(ctx, userID) //Получаем корзину
+		cart, err := s.cartRepo.GetActiveCart(ctx, userID)
 		if err != nil {
 			return err
 		}
-		if len(cart.Items) == 0 {
-			return errors.New("empty cart")
+		if len(cart.Items()) == 0 {
+			return errs.ErrEmptyCart
 		}
-		reservations := buildReservationsFromCart(cart)
-		products, err := s.productRepository.Reserve(ctx, reservations)
+		ids := buildIds(cart)
+		products, err := s.productRepository.GetByIDs(ctx, ids)
 		if err != nil {
 			return err
 		}
-		productsMap := buildProductsMap(products)
-
-		orderItems, err := buildOrderItems(cart, productsMap)
+		items, err := buildOrderItems(cart, products)
 		if err != nil {
 			return err
 		}
@@ -60,84 +57,38 @@ func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*Order,
 		if err != nil {
 			return err
 		}
-		now := time.Now()
-		order, err := NewOrder(id, userID, cart.ID, orderItems, now) // Создаем ордер
+		order, err := NewOrder(id, userID, items)
 		if err != nil {
 			return err
 		}
-		if err := s.orderRepo.Save(ctx, order); err != nil { // Сохраняем в бд
+		productsMap := buildProductsMap(products)
+		for _, v := range cart.Items() {
+			product, ok := productsMap[v.ProductID]
+			if !ok {
+				return errs.ErrItemMissing
+			}
+			if err := product.Reserve(v.Quantity); err != nil {
+				return err
+			}
+			if err := s.productRepository.Save(ctx, &product); err != nil {
+				return err
+			}
+		}
+		if err := s.orderRepo.Create(ctx, order); err != nil {
 			return err
 		}
-		if err := s.cartRepo.MakeAsOrdered(ctx, cart.ID); err != nil { //Меняем статус корзины
-			return err
-		}
-		res = order
-
-		return nil
+		cart.MarkAsOrdered()
+		return s.cartRepo.Save(ctx, cart)
 	})
-	return res, err
+	if err != nil {
+		return nil, err
+	}
+	dto := buildDTOOrder(order)
+	return dto, nil
 }
 
-func (s *Service) MarkAsPaid(ctx context.Context, orderID uuid.UUID) error {
-	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
-
-		order, err := s.orderRepo.GetByID(ctx, orderID)
-		if err != nil {
-			return err
-		}
-
-		if order.Status != OrderStatusPending {
-			return errors.New("failed status order not pending")
-		}
-
-		reservations := buildReservationsFromOrder(order)
-
-		if err := s.productRepository.Commit(ctx, reservations); err != nil {
-			return err
-		}
-
-		if err := s.orderRepo.MakeAsPaid(ctx, orderID); err != nil {
-			return err
-		}
-		return nil
-	})
-
-	return err
-}
-
-func (s *Service) CancelOrder(ctx context.Context, orderID uuid.UUID) error {
-	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		order, err := s.orderRepo.GetByID(ctx, orderID)
-		if err != nil {
-			return err
-		}
-
-		if order.Status == OrderStatusCancelled {
-			return nil
-		}
-
-		if order.Status != OrderStatusPending {
-			return errors.New("failed status order not pending")
-		}
-
-		reservations := buildReservationsFromOrder(order)
-
-		if err := s.productRepository.Release(ctx, reservations); err != nil {
-			return err
-		}
-
-		if err := s.orderRepo.MakeAsCancelled(ctx, orderID); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return err
-}
-
-func (s *Service) GetOrderByID(ctx context.Context, orderID uuid.UUID) (*DTOOrder, error) {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
+func (s *Service) GetByID(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error) {
+	order, err := s.orderRepo.GetByID(ctx, orderID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +109,11 @@ func (s *Service) GetOrdersByUser(ctx context.Context, userID uuid.UUID, limit, 
 
 func buildDTOOrder(order *Order) *DTOOrder {
 	return &DTOOrder{
-		ID:        order.ID,
-		Status:    string(order.Status),
-		Total:     order.Total.Amount,
-		CreatedAt: order.CreatedAt,
-		Items:     buildDTOOrderItems(order.Items),
+		ID:        order.id,
+		Status:    string(order.status),
+		Total:     order.total.Amount,
+		CreatedAt: order.createdAt,
+		Items:     buildDTOOrderItems(order.items),
 	}
 }
 
@@ -179,63 +130,39 @@ func buildDTOOrderItems(items []OrderItem) []DTOOrderItem {
 	return dtoItems
 }
 
-func buildReservationsFromCart(cart *cart.Cart) []product.Reservation {
-	reservations := make([]product.Reservation, 0, len(cart.Items))
-	for _, v := range cart.Items {
-		reservations = append(reservations, product.Reservation{
-			ProductID: v.ProductID,
-			Quantity:  v.Quantity,
-		})
-	}
-	sort.Slice(reservations, func(i, j int) bool {
-		return reservations[i].ProductID.String() < reservations[j].ProductID.String()
-	})
-	return reservations
-}
-
-func buildReservationsFromOrder(order *Order) []product.Reservation {
-	reservations := make([]product.Reservation, 0, len(order.Items))
-	for _, v := range order.Items {
-		reservations = append(reservations, product.Reservation{
-			ProductID: v.ProductID,
-			Quantity:  v.Quantity,
-		})
-	}
-	sort.Slice(reservations, func(i, j int) bool {
-		return reservations[i].ProductID.String() < reservations[j].ProductID.String()
-	})
-	return reservations
-}
-
 func buildIds(cart *cart.Cart) []uuid.UUID {
-	ids := make([]uuid.UUID, 0, len(cart.Items))
-	for _, v := range cart.Items {
+	ids := make([]uuid.UUID, 0, len(cart.Items()))
+	for _, v := range cart.Items() {
 		ids = append(ids, v.ProductID)
 	}
 	return ids
 }
 
-func buildProductsMap(products []product.Product) map[uuid.UUID]product.Product {
+func buildOrderItems(cart *cart.Cart, products []product.Product) ([]OrderItem, error) {
 	res := make(map[uuid.UUID]product.Product, len(products))
 	for _, v := range products {
-		res[v.ID] = v
+		res[v.ID()] = v
 	}
-	return res
-}
-
-func buildOrderItems(cart *cart.Cart, products map[uuid.UUID]product.Product) ([]OrderItem, error) {
-	orderItems := make([]OrderItem, 0, len(cart.Items))
-	for _, v := range cart.Items {
-		product, ok := products[v.ProductID]
+	orderItems := make([]OrderItem, 0, len(cart.Items()))
+	for _, v := range cart.Items() {
+		product, ok := res[v.ProductID]
 		if !ok {
 			return nil, errors.New("Товар не найден")
 		}
 		orderItems = append(orderItems, OrderItem{
 			ProductID: v.ProductID,
-			Name:      product.Name,
+			Name:      product.Name(),
 			Quantity:  v.Quantity,
-			Price:     product.Price,
+			Price:     product.Price(),
 		})
 	}
 	return orderItems, nil
+}
+
+func buildProductsMap(products []product.Product) map[uuid.UUID]product.Product {
+	productsMap := make(map[uuid.UUID]product.Product, len(products))
+	for _, v := range products {
+		productsMap[v.ID()] = v
+	}
+	return productsMap
 }

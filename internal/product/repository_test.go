@@ -3,10 +3,8 @@ package product_test
 import (
 	"context"
 	"shop-api/internal/database"
-	"shop-api/internal/errs"
 	"shop-api/internal/money"
 	"shop-api/internal/product"
-	"sync"
 	"testing"
 	"time"
 
@@ -43,67 +41,6 @@ func setupRepo(t *testing.T) (*product.Repository, context.Context) {
 	require.NoError(t, err)
 
 	return repo, ctx
-}
-
-func TestConcurrentReserve(t *testing.T) {
-
-	count := 100
-	stock := 21
-	reserve := 7
-	suc := stock / reserve
-
-	repo, ctx := setupRepo(t)
-
-	prod := newTestCustomProduct(t, "test", "test", "test", stock, 100)
-
-	err := repo.Create(ctx, prod)
-	require.NoError(t, err)
-
-	var wg sync.WaitGroup
-
-	wg.Add(count)
-
-	start := make(chan struct{})
-
-	errors := make([]error, count)
-
-	for i := range count {
-		i := i
-		go func() {
-			defer wg.Done()
-			<-start
-
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
-			_, errors[i] = repo.Reserve(ctx, []product.Reservation{
-				{
-					ProductID: prod.ID,
-					Quantity:  reserve,
-				},
-			})
-		}()
-	}
-
-	close(start)
-	wg.Wait()
-
-	success := 0
-
-	for _, err := range errors {
-		if err == nil {
-			success++
-		} else {
-			require.ErrorIs(t, err, errs.ErrNotEnoughStock)
-		}
-
-	}
-	require.Equal(t, suc, success)
-
-	product, err := repo.GetByID(ctx, prod.ID)
-	require.NoError(t, err)
-
-	require.Equal(t, reserve*suc, product.Reserved)
 }
 
 func TestList_FilterByCategory(t *testing.T) {
@@ -215,7 +152,7 @@ func TestList_FilterMinPrice(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := range products {
-		require.GreaterOrEqual(t, products[i].Price.Amount, minPrice)
+		require.GreaterOrEqual(t, products[i].Price().Amount, minPrice)
 	}
 }
 
@@ -240,6 +177,6 @@ func TestList_FilterMaxPrice(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := range products {
-		require.LessOrEqual(t, products[i].Price.Amount, maxPrice)
+		require.LessOrEqual(t, products[i].Price().Amount, maxPrice)
 	}
 }

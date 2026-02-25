@@ -38,7 +38,7 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 		"name":        product.Name,
 		"description": product.Description,
 		"category":    product.Category,
-		"price":       product.Price.Amount,
+		"price":       product.price.Amount,
 		"stock":       product.Stock,
 		"is_active":   product.IsActive,
 	}
@@ -49,7 +49,7 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 	return nil
 }
 
-func (r *Repository) Update(ctx context.Context, product *Product) error {
+func (r *Repository) Save(ctx context.Context, product *Product) error {
 	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
@@ -72,10 +72,10 @@ func (r *Repository) Update(ctx context.Context, product *Product) error {
 		"name":        product.Name,
 		"description": product.Description,
 		"category":    product.Category,
-		"price":       product.Price.Amount,
+		"price":       product.price.Amount,
 		"stock":       product.Stock,
 		"is_active":   product.IsActive,
-		"version":     product.Version,
+		"version":     product.version,
 	}
 
 	cmd, err := exec.Exec(ctx, query, args)
@@ -83,7 +83,7 @@ func (r *Repository) Update(ctx context.Context, product *Product) error {
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
-		return errors.New("failed save version conflict")
+		return errs.ErrVersionConflict
 	}
 	return nil
 }
@@ -108,129 +108,12 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *Repository) Reserve(ctx context.Context, products []Reservation) ([]Product, error) {
-	exec := database.Executor(ctx, r.dbPool)
-
-	query :=
-		`
-	UPDATE products
-	SET
-		reserved = reserved + @quantity
-	WHERE id = @id AND is_active = TRUE AND stock - reserved >= @quantity
-	RETURNING id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
-	`
-	var result []Product
-
-	for _, v := range products {
-
-		if v.Quantity <= 0 {
-			return nil, errors.New("invalid quantity")
-		}
-
-		args := pgx.NamedArgs{
-			"id":       v.ProductID,
-			"quantity": v.Quantity,
-		}
-
-		var p Product
-
-		err := exec.QueryRow(ctx, query, args).Scan(
-			&p.ID,
-			&p.Name,
-			&p.Description,
-			&p.Category,
-			&p.Price.Amount,
-			&p.Stock,
-			&p.Reserved,
-			&p.IsActive,
-			&p.Version,
-			&p.CreatedAt,
-			&p.UpdatedAt,
-		)
-		if err != nil {
-			if err == pgx.ErrNoRows {
-				return nil, errs.ErrNotEnoughStock
-			}
-			return nil, err
-		}
-		result = append(result, p)
-	}
-
-	return result, nil
-
-}
-
-func (r *Repository) Commit(ctx context.Context, products []Reservation) error {
-	exec := database.Executor(ctx, r.dbPool)
-
-	query :=
-		`
-	UPDATE products
-	SET
-		reserved = reserved - @quantity,
-		stock = stock - @quantity
-	WHERE id = @id AND reserved >= @quantity
-	`
-	for _, v := range products {
-
-		if v.Quantity <= 0 {
-			return errors.New("invalid quantity")
-		}
-
-		args := pgx.NamedArgs{
-			"id":       v.ProductID,
-			"quantity": v.Quantity,
-		}
-		cmd, err := exec.Exec(ctx, query, args)
-		if err != nil {
-			return err
-		}
-
-		if cmd.RowsAffected() == 0 {
-			return errs.ErrNotEnoughStock
-		}
-	}
-	return nil
-}
-
-func (r *Repository) Release(ctx context.Context, products []Reservation) error {
-	exec := database.Executor(ctx, r.dbPool)
-
-	query :=
-		`
-	UPDATE products
-	SET
-		reserved = reserved - @quantity
-	WHERE id = @id AND reserved >= @quantity
-	`
-	for _, v := range products {
-
-		if v.Quantity <= 0 {
-			return errors.New("invalid quantity")
-		}
-
-		args := pgx.NamedArgs{
-			"id":       v.ProductID,
-			"quantity": v.Quantity,
-		}
-		cmd, err := exec.Exec(ctx, query, args)
-		if err != nil {
-			return err
-		}
-
-		if cmd.RowsAffected() == 0 {
-			return errors.New("not enough reserve")
-		}
-	}
-	return nil
-}
-
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Product, error) {
 	exec := database.Executor(ctx, r.dbPool)
 
 	query :=
 		`
-		SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+		SELECT id, name, description, category, price, stock, reserved, is_active, version
 		FROM products
 		WHERE id = @id
 	`
@@ -240,17 +123,15 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Product, error
 	cmd := exec.QueryRow(ctx, query, args)
 	var p Product
 	if err := cmd.Scan(
-		&p.ID,
-		&p.Name,
-		&p.Description,
-		&p.Category,
-		&p.Price.Amount,
-		&p.Stock,
-		&p.Reserved,
-		&p.IsActive,
-		&p.Version,
-		&p.CreatedAt,
-		&p.UpdatedAt,
+		&p.id,
+		&p.name,
+		&p.description,
+		&p.category,
+		&p.price.Amount,
+		&p.stock,
+		&p.reserved,
+		&p.isActive,
+		&p.version,
 	); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, errors.New("product not found")
@@ -265,7 +146,7 @@ func (r *Repository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]Product, 
 
 	query :=
 		`
-		SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+		SELECT id, name, description, category, price, stock, reserved, is_active, version
 		FROM products
 		WHERE id = ANY(@ids)
 	`
@@ -283,17 +164,15 @@ func (r *Repository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]Product, 
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(
-			&p.ID,
-			&p.Name,
-			&p.Description,
-			&p.Category,
-			&p.Price.Amount,
-			&p.Stock,
-			&p.Reserved,
-			&p.IsActive,
-			&p.Version,
-			&p.CreatedAt,
-			&p.UpdatedAt,
+			&p.id,
+			&p.name,
+			&p.description,
+			&p.category,
+			&p.price.Amount,
+			&p.stock,
+			&p.reserved,
+			&p.isActive,
+			&p.version,
 		); err != nil {
 			return nil, err
 		}
@@ -316,7 +195,7 @@ func (r *Repository) List(ctx context.Context, filters ListFilters) ([]Product, 
 
 	query :=
 		`
-	SELECT id, name, description, category, price, stock, reserved, is_active, version, created_at, updated_at
+	SELECT id, name, description, category, price, stock, reserved, is_active, version
 	FROM products
 	WHERE 1=1
 	`
@@ -373,17 +252,15 @@ func (r *Repository) List(ctx context.Context, filters ListFilters) ([]Product, 
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(
-			&p.ID,
-			&p.Name,
-			&p.Description,
-			&p.Category,
-			&p.Price.Amount,
-			&p.Stock,
-			&p.Reserved,
-			&p.IsActive,
-			&p.Version,
-			&p.CreatedAt,
-			&p.UpdatedAt,
+			&p.id,
+			&p.name,
+			&p.description,
+			&p.category,
+			&p.price.Amount,
+			&p.stock,
+			&p.reserved,
+			&p.isActive,
+			&p.version,
 		); err != nil {
 			return nil, err
 		}

@@ -2,7 +2,7 @@ package cart
 
 import (
 	"errors"
-	"time"
+	"shop-api/internal/errs"
 
 	"github.com/google/uuid"
 )
@@ -18,89 +18,105 @@ const (
 type CartItem struct {
 	ProductID uuid.UUID
 	Quantity  int
-	AddedAt   time.Time
 }
 
 type Cart struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Status    CartStatus
-	Items     []CartItem
-	Version   int64
-	
-	CreateDAt time.Time
-	UpdatedAt time.Time
+	id      uuid.UUID
+	userID  uuid.UUID
+	status  CartStatus
+	items   []CartItem
+	version int64
 }
 
-func NewCart(id uuid.UUID, userID uuid.UUID, now time.Time) *Cart {
+func NewCart(id uuid.UUID, userID uuid.UUID) *Cart {
 	return &Cart{
-		ID:        id,
-		UserID:    userID,
-		Status:    CartStatusActive,
-		UpdatedAt: now,
-		Items:     []CartItem{},
-		Version:   0,
+		id:      id,
+		userID:  userID,
+		status:  CartStatusActive,
+		items:   []CartItem{},
+		version: 0,
 	}
 }
 
-func (c *Cart) AddItem(productID uuid.UUID, qty int, now time.Time) error {
-	if c.Status != CartStatusActive {
-		return errors.New("cart inactive")
+func (c *Cart) AddItem(productID uuid.UUID, qty int) error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
 	}
 	if qty <= 0 {
-		return errors.New("qty should be > 0")
+		return errs.ErrInvalidQuantity
 	}
-	for k, v := range c.Items {
+	for k, v := range c.items {
 		if v.ProductID == productID {
-			c.Items[k].Quantity += qty
+			c.items[k].Quantity += qty
 			return nil
 		}
 	}
-	c.Items = append(c.Items, CartItem{
+	c.items = append(c.items, CartItem{
 		ProductID: productID,
 		Quantity:  qty,
-		AddedAt:   time.Now(),
 	})
-	c.UpdatedAt = now
 	return nil
 }
 
-func (c *Cart) RemoveItem(productID uuid.UUID, now time.Time) error {
-	if c.Status != CartStatusActive {
-		return errors.New("cart inactive")
+func (c *Cart) RemoveItem(productID uuid.UUID, qty int) error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
 	}
-	c.UpdatedAt = now
-	for k, v := range c.Items {
-		if v.ProductID == productID {
-			c.Items = append(c.Items[:k], c.Items[k+1:]...)
+	if qty <= 0 {
+		return errs.ErrInvalidQuantity
+	}
+	for k := range c.items {
+		if c.items[k].ProductID == productID {
+			if c.items[k].Quantity < qty {
+				return errs.ErrInvalidQuantity
+			}
+
+			c.items[k].Quantity -= qty
+
+			if c.items[k].Quantity == 0 {
+				c.items[k] = c.items[len(c.items)-1]
+				c.items = c.items[:len(c.items)-1]
+			}
 			return nil
 		}
 	}
 	return errors.New("failed remove product not found")
 }
 
-func (c *Cart) ChangeQuantityItem(productID uuid.UUID, qty int, now time.Time) error {
-	if c.Status != CartStatusActive {
-		return errors.New("cart inactive")
+func (c *Cart) MarkAsExpired() error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
 	}
-	if qty <= 0 {
-		return errors.New("qty should be > 0")
-	}
-	c.UpdatedAt = now
-	for k, v := range c.Items {
-		if v.ProductID == productID {
-			c.Items[k].Quantity += qty
-			return nil
-		}
-	}
-	return errors.New("failed change qty product not found")
+
+	c.status = CartStatusExpired
+
+	return nil
 }
 
-func (c *Cart) CartDoExpired() {
-	c.Status = CartStatusExpired
+func (c *Cart) ClearItems() error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
+	}
+
+	c.items = []CartItem{}
+
+	return nil
 }
 
-func (c *Cart) ClearItems(now time.Time) {
-	c.Items = []CartItem{}
-	c.UpdatedAt = now
+func (c *Cart) MarkAsOrdered() error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
+	}
+
+	c.status = CartStatusOrdered
+
+	return nil
+}
+
+func (c *Cart) ID() uuid.UUID {
+	return c.id
+}
+
+func (c *Cart) Items() []CartItem {
+	return c.items
 }

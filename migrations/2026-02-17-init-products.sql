@@ -9,6 +9,6 @@ CREATE TABLE products (
     is_active BOOLEAN NOT NULL,
     version BIGINT NOT NULL DEFAULT 0 CHECK (version >= 0),
     CHECK (reserved <= stock),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

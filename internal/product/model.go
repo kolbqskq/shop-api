@@ -4,28 +4,20 @@ import (
 	"errors"
 	"shop-api/internal/errs"
 	"shop-api/internal/money"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 type Product struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
-	Category    string
-	Price       money.Money
-	Stock       int
-	Reserved    int
-	IsActive    bool
-	Version     int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-type Reservation struct {
-	ProductID uuid.UUID
-	Quantity  int
+	id          uuid.UUID
+	name        string
+	description string
+	category    string
+	price       money.Money
+	stock       int
+	reserved    int
+	isActive    bool
+	version     int64
 }
 
 type ProductSortField string
@@ -51,15 +43,15 @@ type ListFilters struct {
 
 func NewProduct(id uuid.UUID, name, description, category string, price money.Money, stock int, isActive bool) (*Product, error) {
 	product := &Product{
-		ID:          id,
-		Name:        name,
-		Description: description,
-		Category:    category,
-		Price:       price,
-		Stock:       stock,
-		IsActive:    isActive,
-		Reserved:    0,
-		Version:     0,
+		id:          id,
+		name:        name,
+		description: description,
+		category:    category,
+		price:       price,
+		stock:       stock,
+		isActive:    isActive,
+		reserved:    0,
+		version:     0,
 	}
 	if err := product.Validate(); err != nil {
 		return nil, err
@@ -68,13 +60,13 @@ func NewProduct(id uuid.UUID, name, description, category string, price money.Mo
 }
 
 func (p *Product) Validate() error {
-	if p.Name == "" {
+	if p.name == "" {
 		return errors.New("empty name")
 	}
-	if p.Price.Amount < 0 {
+	if p.price.Amount < 0 {
 		return errs.ErrInvalidPrice
 	}
-	if p.Stock < p.Reserved {
+	if p.stock < p.reserved {
 		return errs.ErrInvalidStock
 	}
 	return nil
@@ -84,7 +76,7 @@ func (p *Product) ChangeName(name string) error {
 	if name == "" {
 		return errors.New("empty name")
 	}
-	p.Name = name
+	p.name = name
 	return nil
 }
 
@@ -92,7 +84,7 @@ func (p *Product) ChangeDescription(description string) error {
 	if description == "" {
 		return errors.New("empty desc")
 	}
-	p.Description = description
+	p.description = description
 	return nil
 }
 
@@ -100,7 +92,7 @@ func (p *Product) ChangeCategory(category string) error {
 	if category == "" {
 		return errors.New("empty category")
 	}
-	p.Category = category
+	p.category = category
 	return nil
 }
 
@@ -108,18 +100,58 @@ func (p *Product) ChangePrice(price money.Money) error {
 	if price.Amount < 0 {
 		return errors.New("invalid price")
 	}
-	p.Price = price
+	p.price = price
 	return nil
 }
 
-func (p *Product) ChangeStock(stock int) error {
-	if stock < p.Reserved {
+func (p *Product) ChangeStock(qty int) error {
+	if qty < p.reserved {
 		return errors.New("invalid stock")
 	}
-	p.Stock = stock
+	p.stock = qty
 	return nil
 }
 
 func (p *Product) ChangeIsActive(isActive bool) {
-	p.IsActive = isActive
+	p.isActive = isActive
+}
+
+func (p *Product) Reserve(qty int) error {
+	if qty > p.stock-p.reserved {
+		return errs.ErrNotEnoughStock
+	}
+	p.reserved += qty
+	return nil
+}
+
+func (p *Product) ID() uuid.UUID {
+	return p.id
+}
+
+func (p *Product) Name() string {
+	return p.name
+}
+
+func (p *Product) Description() string {
+	return p.description
+}
+
+func (p *Product) Category() string {
+	return p.category
+}
+
+func (p *Product) Price() money.Money {
+	return p.price
+}
+
+func (p *Product) Stock() int {
+	return p.stock
+}
+
+func (p *Product) Reserved() int {
+	return p.reserved
+}
+
+func (p *Product) IsActive() bool {
+	return p.isActive
 }

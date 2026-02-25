@@ -55,14 +55,14 @@ func TestCreate_Success(t *testing.T) {
 		Stock:       stock,
 		IsActive:    true,
 	})
-
+	
 	require.NoError(t, err)
 	require.Equal(t, product, repo.ProductPassed)
 	require.True(t, repo.CreateCalled)
 	require.NotNil(t, repo.ProductPassed)
-	require.Equal(t, name, product.Name)
-	require.Equal(t, price.Amount, product.Price.Amount)
-	require.Equal(t, stock, product.Stock)
+	require.Equal(t, name, product.Name())
+	require.Equal(t, price.Amount, product.Price().Amount)
+	require.Equal(t, stock, product.Stock())
 }
 
 func TestCreate_InvalidStock(t *testing.T) {

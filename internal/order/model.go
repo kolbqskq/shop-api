@@ -24,29 +24,26 @@ type OrderItem struct {
 }
 
 type Order struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	CartID    uuid.UUID
-	Status    OrderStatus
-	Items     []OrderItem
-	Total     money.Money
-	CreatedAt time.Time
-	Version   int64
+	id        uuid.UUID
+	userID    uuid.UUID
+	status    OrderStatus
+	items     []OrderItem
+	total     money.Money
+	createdAt time.Time
+	version   int64
 }
 
-func NewOrder(id, userID, cartID uuid.UUID, items []OrderItem, now time.Time) (*Order, error) {
+func NewOrder(id, userID uuid.UUID, items []OrderItem) (*Order, error) {
 	if len(items) == 0 {
 		return nil, errors.New("cart is empty")
 	}
 	return &Order{
-		ID:        id,
-		UserID:    userID,
-		CartID:    cartID,
-		Status:    OrderStatusPending,
-		Items:     items,
-		Total:     calculateTotal(items),
-		CreatedAt: now,
-		Version:   0,
+		id:      id,
+		userID:  userID,
+		status:  OrderStatusPending,
+		items:   items,
+		total:   calculateTotal(items),
+		version: 0,
 	}, nil
 }
 
