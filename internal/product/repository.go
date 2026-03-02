@@ -34,13 +34,13 @@ func (r *Repository) Create(ctx context.Context, product *Product) error {
 	VALUES (@id, @name, @description, @category, @price, @stock, @is_active)
 	`
 	args := pgx.NamedArgs{
-		"id":          product.ID,
-		"name":        product.Name,
-		"description": product.Description,
-		"category":    product.Category,
+		"id":          product.id,
+		"name":        product.name,
+		"description": product.description,
+		"category":    product.category,
 		"price":       product.price.Amount,
-		"stock":       product.Stock,
-		"is_active":   product.IsActive,
+		"stock":       product.stock,
+		"is_active":   product.isActive,
 	}
 	_, err := exec.Exec(ctx, query, args)
 	if err != nil {
@@ -68,23 +68,24 @@ func (r *Repository) Save(ctx context.Context, product *Product) error {
 	WHERE id = @id AND version = @version
 	`
 	args := pgx.NamedArgs{
-		"id":          product.ID,
-		"name":        product.Name,
-		"description": product.Description,
-		"category":    product.Category,
+		"id":          product.id,
+		"name":        product.name,
+		"description": product.description,
+		"category":    product.category,
 		"price":       product.price.Amount,
-		"stock":       product.Stock,
-		"is_active":   product.IsActive,
+		"stock":       product.stock,
+		"is_active":   product.isActive,
 		"version":     product.version,
 	}
 
-	cmd, err := exec.Exec(ctx, query, args)
+	row, err := exec.Exec(ctx, query, args)
 	if err != nil {
 		return err
 	}
-	if cmd.RowsAffected() == 0 {
+	if row.RowsAffected() == 0 {
 		return errs.ErrVersionConflict
 	}
+	product.version++
 	return nil
 }
 
@@ -134,7 +135,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Product, error
 		&p.version,
 	); err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, errors.New("product not found")
+			return nil, errs.ErrProductNotFound
 		}
 		return nil, err
 	}
@@ -149,6 +150,7 @@ func (r *Repository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]Product, 
 		SELECT id, name, description, category, price, stock, reserved, is_active, version
 		FROM products
 		WHERE id = ANY(@ids)
+		ORDER BY id
 	`
 	args := pgx.NamedArgs{
 		"ids": ids,

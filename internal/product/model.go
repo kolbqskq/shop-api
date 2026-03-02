@@ -155,3 +155,7 @@ func (p *Product) Reserved() int {
 func (p *Product) IsActive() bool {
 	return p.isActive
 }
+
+func (p *Product) Available() int {
+	return p.stock - p.reserved
+}

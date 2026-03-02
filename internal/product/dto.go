@@ -34,3 +34,12 @@ type DTOListFilters struct {
 	MaxPrice *int64
 	IsActive *bool
 }
+
+type DTOProduct struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Category    string
+	Price       int64
+	Available   int
+}

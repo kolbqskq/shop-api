@@ -1,3 +1,4 @@
+--CreateTable
 CREATE TABLE order_items (
     order_id UUID NOT NULL,
     product_id UUID NOT NULL,

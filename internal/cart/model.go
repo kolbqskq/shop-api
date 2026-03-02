@@ -1,7 +1,6 @@
 package cart
 
 import (
-	"errors"
 	"shop-api/internal/errs"
 
 	"github.com/google/uuid"
@@ -58,7 +57,7 @@ func (c *Cart) AddItem(productID uuid.UUID, qty int) error {
 	return nil
 }
 
-func (c *Cart) RemoveItem(productID uuid.UUID, qty int) error {
+func (c *Cart) DecreaseItem(productID uuid.UUID, qty int) error {
 	if c.status != CartStatusActive {
 		return errs.ErrCartNotActive
 	}
@@ -67,20 +66,29 @@ func (c *Cart) RemoveItem(productID uuid.UUID, qty int) error {
 	}
 	for k := range c.items {
 		if c.items[k].ProductID == productID {
-			if c.items[k].Quantity < qty {
-				return errs.ErrInvalidQuantity
+			if c.items[k].Quantity <= qty {
+				c.removeByIndex(k)
+				return nil
 			}
 
 			c.items[k].Quantity -= qty
-
-			if c.items[k].Quantity == 0 {
-				c.items[k] = c.items[len(c.items)-1]
-				c.items = c.items[:len(c.items)-1]
-			}
 			return nil
 		}
 	}
-	return errors.New("failed remove product not found")
+	return errs.ErrProductNotFound
+}
+
+func (c *Cart) RemoveItem(productID uuid.UUID) error {
+	if c.status != CartStatusActive {
+		return errs.ErrCartNotActive
+	}
+	for k := range c.items {
+		if c.items[k].ProductID == productID {
+			c.removeByIndex(k)
+			return nil
+		}
+	}
+	return errs.ErrProductNotFound
 }
 
 func (c *Cart) MarkAsExpired() error {
@@ -119,4 +127,9 @@ func (c *Cart) ID() uuid.UUID {
 
 func (c *Cart) Items() []CartItem {
 	return c.items
+}
+
+func (c *Cart) removeByIndex(i int) {
+	c.items[i] = c.items[len(c.items)-1]
+	c.items = c.items[:len(c.items)-1]
 }

@@ -38,7 +38,7 @@ func (r *Repository) Create(ctx context.Context, order *Order) error {
 	query :=
 		`
 	INSERT INTO orders (id, user_id, total)
-	VALUES (@id, @user_id, @total);
+	VALUES (@id, @user_id, @total)
 	`
 	args := pgx.NamedArgs{
 		"id":      order.id,

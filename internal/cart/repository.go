@@ -105,6 +105,7 @@ func (r *Repository) Save(ctx context.Context, cart *Cart) error {
 			return err
 		}
 	}
+	cart.version++
 	return nil
 }
 

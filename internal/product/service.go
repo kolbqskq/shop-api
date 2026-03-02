@@ -2,6 +2,7 @@ package product
 
 import (
 	"context"
+	"shop-api/internal/errs"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +20,7 @@ func NewService(deps ServiceDeps) *Service {
 	}
 }
 
-func (s *Service) CreateProduct(ctx context.Context, create CreateProductRequest) (*Product, error) {
+func (s *Service) CreateProduct(ctx context.Context, create CreateProductRequest) (*DTOProduct, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -28,10 +29,13 @@ func (s *Service) CreateProduct(ctx context.Context, create CreateProductRequest
 	if err != nil {
 		return nil, err
 	}
-	return product, s.repo.Create(ctx, product)
+	return buildDTOProduct(product), s.repo.Create(ctx, product)
 }
 
-func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (*Product, error) {
+func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (*DTOProduct, error) {
+	if (upd.Name == nil && upd.Description == nil && upd.Category == nil && upd.Price == nil && upd.Stock == nil && upd.IsActive == nil) || upd.ID == uuid.Nil {
+		return nil, errs.ErrBadRequest
+	}
 	product, err := s.repo.GetByID(ctx, upd.ID)
 	if err != nil {
 		return nil, err
@@ -64,14 +68,14 @@ func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (
 	if upd.IsActive != nil {
 		product.ChangeIsActive(*upd.IsActive)
 	}
-	return product, s.repo.Update(ctx, product)
+	return buildDTOProduct(product), s.repo.Update(ctx, product)
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]Product, error) {
+func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]DTOProduct, error) {
 	limit := 20
 	if filters.Limit != nil && *filters.Limit > 0 && *filters.Limit <= 100 {
 		limit = *filters.Limit
@@ -99,5 +103,28 @@ func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]Pr
 		MaxPrice: filters.MaxPrice,
 		IsActive: filters.IsActive,
 	}
-	return s.repo.List(ctx, filter)
+	products, err := s.repo.List(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return buildDTOProductSlice(products), nil
+}
+
+func buildDTOProduct(product *Product) *DTOProduct {
+	return &DTOProduct{
+		ID:          product.id,
+		Name:        product.name,
+		Description: product.description,
+		Category:    product.category,
+		Price:       product.price.Amount,
+		Available:   product.Available(),
+	}
+}
+
+func buildDTOProductSlice(products []Product) []DTOProduct {
+	dto := make([]DTOProduct, 0, len(products))
+	for _, v := range products {
+		dto = append(dto, *buildDTOProduct(&v))
+	}
+	return dto
 }

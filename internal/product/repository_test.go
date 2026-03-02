@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestCustomProduct(t *testing.T, name, desc, category string, stock int, price int64) *product.Product {
+func NewTestCustomProduct(t *testing.T, name, desc, category string, stock int, price int64) *product.Product {
 	t.Helper()
 
 	id, err := uuid.NewV7()
@@ -49,10 +49,10 @@ func TestList_FilterByCategory(t *testing.T) {
 	category := "games"
 	otherCategory := "books"
 
-	prod1 := newTestCustomProduct(t, "test", "test", category, 10, 100)
+	prod1 := NewTestCustomProduct(t, "test", "test", category, 10, 100)
 	require.NoError(t, repo.Create(ctx, prod1))
 
-	prod2 := newTestCustomProduct(t, "test", "test", otherCategory, 10, 100)
+	prod2 := NewTestCustomProduct(t, "test", "test", otherCategory, 10, 100)
 	require.NoError(t, repo.Create(ctx, prod2))
 
 	products, err := repo.List(ctx, product.ListFilters{
@@ -63,9 +63,8 @@ func TestList_FilterByCategory(t *testing.T) {
 		Category: &category,
 	})
 	require.NoError(t, err)
-
 	require.Len(t, products, 1)
-	require.Equal(t, category, products[0].Category)
+	require.Equal(t, category, products[0].Category())
 }
 
 func TestList_FilterLimit(t *testing.T) {
@@ -75,7 +74,7 @@ func TestList_FilterLimit(t *testing.T) {
 	limit := 3
 
 	for range count {
-		require.NoError(t, repo.Create(ctx, newTestCustomProduct(t, "test", "test", "test", 10, 100)))
+		require.NoError(t, repo.Create(ctx, NewTestCustomProduct(t, "test", "test", "test", 10, 100)))
 	}
 
 	products, err := repo.List(ctx, product.ListFilters{
@@ -96,7 +95,7 @@ func TestList_FilterOffset(t *testing.T) {
 	offset := 3
 
 	for i := range count {
-		require.NoError(t, repo.Create(ctx, newTestCustomProduct(t, "test", "test", "test", i, 100)))
+		require.NoError(t, repo.Create(ctx, NewTestCustomProduct(t, "test", "test", "test", i, 100)))
 	}
 
 	products, err := repo.List(ctx, product.ListFilters{
@@ -107,7 +106,7 @@ func TestList_FilterOffset(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, products, 1)
-	require.Equal(t, offset, products[0].Stock)
+	require.Equal(t, offset, products[0].Stock())
 }
 
 func TestList_FilterDescTrue(t *testing.T) {
@@ -117,7 +116,7 @@ func TestList_FilterDescTrue(t *testing.T) {
 	sortDesc := true
 
 	for i := range count {
-		require.NoError(t, repo.Create(ctx, newTestCustomProduct(t, "test", "test", "test", i, 100)))
+		require.NoError(t, repo.Create(ctx, NewTestCustomProduct(t, "test", "test", "test", i, 100)))
 	}
 
 	products, err := repo.List(ctx, product.ListFilters{
@@ -128,7 +127,7 @@ func TestList_FilterDescTrue(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, products, 10)
-	require.Equal(t, count-1, products[0].Stock)
+	require.Equal(t, count-1, products[0].Stock())
 }
 
 func TestList_FilterMinPrice(t *testing.T) {
@@ -138,7 +137,7 @@ func TestList_FilterMinPrice(t *testing.T) {
 	minPrice := int64(500)
 
 	for i := 0; i < count*100; i += 100 {
-		require.NoError(t, repo.Create(ctx, newTestCustomProduct(t, "test", "test", "test", 10, int64(i))))
+		require.NoError(t, repo.Create(ctx, NewTestCustomProduct(t, "test", "test", "test", 10, int64(i))))
 	}
 
 	products, err := repo.List(ctx, product.ListFilters{
@@ -163,7 +162,7 @@ func TestList_FilterMaxPrice(t *testing.T) {
 	maxPrice := int64(500)
 
 	for i := 0; i < count*100; i += 100 {
-		require.NoError(t, repo.Create(ctx, newTestCustomProduct(t, "test", "test", "test", 10, int64(i))))
+		require.NoError(t, repo.Create(ctx, NewTestCustomProduct(t, "test", "test", "test", 10, int64(i))))
 	}
 
 	products, err := repo.List(ctx, product.ListFilters{

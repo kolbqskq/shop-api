@@ -50,31 +50,82 @@ func (s *Service) getOrCreateActiveCart(ctx context.Context, userID uuid.UUID) (
 	return cart, nil
 }
 
-func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) error {
-	return s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		cart, err := s.getOrCreateActiveCart(ctx, userID)
+func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error) {
+	if _, err := s.productRepo.GetByID(ctx, productID); err != nil {
+		return nil, err
+	}
+
+	var cart *Cart
+
+	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		if _, err := s.productRepo.GetByID(ctx, productID); err != nil {
+			return err
+		}
+		c, err := s.getOrCreateActiveCart(ctx, userID)
 		if err != nil {
 			return err
 		}
-		if err := cart.AddItem(productID, qty); err != nil {
+		if err := c.AddItem(productID, qty); err != nil {
 			return err
 		}
-
-		return s.repo.Save(ctx, cart)
+		cart = c
+		if err := s.repo.Save(ctx, cart); err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return s.buildDTOCart(ctx, cart)
 }
 
-func (s *Service) RemoveFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) error {
-	return s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		cart, err := s.repo.GetActiveCart(ctx, userID)
+func (s *Service) DecreaseFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error) {
+
+	var cart *Cart
+
+	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		c, err := s.repo.GetActiveCart(ctx, userID)
 		if err != nil {
 			return err
 		}
-		if err := cart.RemoveItem(productID, qty); err != nil {
+		if err := c.DecreaseItem(productID, qty); err != nil {
 			return err
 		}
-		return s.repo.Save(ctx, cart)
+		cart = c
+		if err := s.repo.Save(ctx, c); err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return s.buildDTOCart(ctx, cart)
+}
+
+func (s *Service) RemoveFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID) (*DTOCart, error) {
+
+	var cart *Cart
+
+	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		c, err := s.repo.GetActiveCart(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if err := c.RemoveItem(productID); err != nil {
+			return err
+		}
+		cart = c
+		if err := s.repo.Save(ctx, c); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.buildDTOCart(ctx, cart)
 }
 
 func (s *Service) GetActiveCart(ctx context.Context, userID uuid.UUID) (*DTOCart, error) {
@@ -86,16 +137,25 @@ func (s *Service) GetActiveCart(ctx context.Context, userID uuid.UUID) (*DTOCart
 	return s.buildDTOCart(ctx, cart)
 }
 
-func (s *Service) ClearCart(ctx context.Context, userID uuid.UUID) error {
-	return s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		cart, err := s.repo.GetActiveCart(ctx, userID)
+func (s *Service) ClearCart(ctx context.Context, userID uuid.UUID) (*DTOCart, error) {
+	var cart *Cart
+	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		c, err := s.repo.GetActiveCart(ctx, userID)
 		if err != nil {
 			return err
 		}
-		cart.ClearItems()
+		c.ClearItems()
 
-		return s.repo.Save(ctx, cart)
+		if err := s.repo.Save(ctx, c); err != nil {
+			return err
+		}
+		cart = c
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return s.buildDTOCart(ctx, cart)
 }
 
 func (s *Service) buildDTOCart(ctx context.Context, cart *Cart) (*DTOCart, error) {
