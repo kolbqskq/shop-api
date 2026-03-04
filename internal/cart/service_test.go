@@ -50,10 +50,10 @@ type MockRepoProduct struct {
 	GetByIDsCalled bool
 
 	GetErr           error
-	ProductsToReturn map[uuid.UUID]*product.Product
+	ProductsToReturn []product.Product
 }
 
-func (m *MockRepoProduct) GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*product.Product, error) {
+func (m *MockRepoProduct) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]product.Product, error) {
 	m.GetByIDsCalled = true
 	return m.ProductsToReturn, m.GetErr
 }
@@ -78,9 +78,7 @@ func TestGetActiveCart_ReturnsCartWithItems(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
@@ -162,10 +160,7 @@ func TestAddToCart_ExistCart_AddItem(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID:  p,
-			productID2: p2,
-		},
+		ProductsToReturn: []product.Product{*p, *p2},
 	}
 
 	tx := &MockTx{}
@@ -211,9 +206,7 @@ func TestAddToCart_NoCart_AddItem(t *testing.T) {
 		GetErr: errs.ErrCartNotFound,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
@@ -259,9 +252,7 @@ func TestDecreaseFromCart_CartExist_DecreaseItem(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
@@ -314,9 +305,7 @@ func TestDecreaseFromCart_CartExist_RemoveItem(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
@@ -361,9 +350,7 @@ func TestDecreaseFromCart_CartExist_InvalidQuantity(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
@@ -437,9 +424,7 @@ func TestRemoveFromCart_CartExist_RemoveItem(t *testing.T) {
 		CartToReturn: c,
 	}
 	repoProduct := &MockRepoProduct{
-		ProductsToReturn: map[uuid.UUID]*product.Product{
-			productID: p,
-		},
+		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}

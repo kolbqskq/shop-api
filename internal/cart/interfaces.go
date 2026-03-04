@@ -14,7 +14,7 @@ type ICardRepository interface {
 }
 
 type IProductRepository interface {
-	GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*product.Product, error)
+	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]product.Product, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*product.Product, error)
 }
 

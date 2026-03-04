@@ -5,6 +5,7 @@ import (
 	"shop-api/internal/database"
 	"shop-api/internal/errs"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -97,6 +98,47 @@ func (r *Repository) GetByEmail(ctx context.Context, email Email) (*User, error)
 
 	args := pgx.NamedArgs{
 		"email": email.value,
+	}
+
+	row := exec.QueryRow(ctx, query, args)
+
+	u := &User{
+		passwordHash: PasswordHash{},
+		email:        Email{},
+	}
+	if err := row.Scan(
+		&u.id,
+		&u.email.value,
+		&u.passwordHash.value,
+		&u.role,
+		&u.isActive,
+		&u.emailVerified,
+		&u.lastLoginAt,
+		&u.createdAt,
+		&u.updatedAt,
+		&u.deletedAt,
+		&u.version,
+	); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, errs.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return u, nil
+}
+
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+		SELECT id, email, password_hash, role, is_active, email_verified, last_login_at, created_at, updated_at, deleted_at, version
+		FROM users
+		WHERE id = @id AND deleted_at IS NULL
+	`
+
+	args := pgx.NamedArgs{
+		"id": id,
 	}
 
 	row := exec.QueryRow(ctx, query, args)

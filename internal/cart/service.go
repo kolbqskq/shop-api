@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"shop-api/internal/errs"
+	"shop-api/internal/product"
 
 	"github.com/google/uuid"
 )
@@ -173,21 +174,25 @@ func (s *Service) buildDTOCart(ctx context.Context, cart *Cart) (*DTOCart, error
 	if err != nil {
 		return nil, err
 	}
-
+	productMap := make(map[uuid.UUID]product.Product, len(products))
+	for _, v := range products {
+		productMap[v.ID()] = v
+	}
 	dto := &DTOCart{
 		ID:    cart.id,
 		Items: make([]DTOCartItemView, 0, len(cart.items)),
 	}
+
 	for _, v := range cart.items {
-		product, ok := products[v.ProductID]
+		p, ok := productMap[v.ProductID]
 		if !ok {
 			continue
 		}
 		dto.Items = append(dto.Items, DTOCartItemView{
-			ProductID: product.ID(),
-			Name:      product.Name(),
-			Price:     product.Price(),
-			IsActive:  product.IsActive(),
+			ProductID: p.ID(),
+			Name:      p.Name(),
+			Price:     p.Price(),
+			IsActive:  p.IsActive(),
 			Quantity:  v.Quantity,
 		})
 	}

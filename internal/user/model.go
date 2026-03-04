@@ -21,10 +21,11 @@ type User struct {
 
 	lastLoginAt *time.Time
 
-	createdAt time.Time
-	updatedAt time.Time
-	deletedAt *time.Time
-	version   int64
+	createdAt    time.Time
+	updatedAt    time.Time
+	deletedAt    *time.Time
+	tokenVersion int64
+	version      int64
 }
 
 type PasswordHash struct {
@@ -120,6 +121,10 @@ func (u *User) PasswordHash() PasswordHash {
 	return u.passwordHash
 }
 
+func (u *User) LastLoginAt() time.Time {
+	return *u.lastLoginAt
+}
+
 func (u *User) ChangePassword(password string) error {
 	passwordHash, err := NewPasswordHash(password)
 	if err != nil {
@@ -131,11 +136,12 @@ func (u *User) ChangePassword(password string) error {
 }
 
 func (u *User) Login(password string) error {
-	if !u.isActive {
-		return errs.ErrUserInactive
-	}
 	if err := u.passwordHash.Compare(password); err != nil {
 		return errs.ErrInvalidCredentials
+	}
+	
+	if !u.isActive {
+		return errs.ErrUserInactive
 	}
 
 	now := time.Now()
@@ -157,4 +163,12 @@ func (u *User) Deactivate() {
 func (u *User) Delete() {
 	now := time.Now()
 	u.deletedAt = &now
+}
+
+func (e Email) Value() string {
+	return e.value
+}
+
+func (p PasswordHash) Value() string {
+	return p.value
 }

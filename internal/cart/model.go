@@ -129,6 +129,10 @@ func (c *Cart) Items() []CartItem {
 	return c.items
 }
 
+func (c *Cart) Status() CartStatus {
+	return c.status
+}
+
 func (c *Cart) removeByIndex(i int) {
 	c.items[i] = c.items[len(c.items)-1]
 	c.items = c.items[:len(c.items)-1]

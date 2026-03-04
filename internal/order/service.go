@@ -57,7 +57,7 @@ func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*DTOOrd
 		if err != nil {
 			return err
 		}
-		order, err := NewOrder(id, userID, items)
+		order, err = NewOrder(id, userID, items)
 		if err != nil {
 			return err
 		}

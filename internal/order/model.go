@@ -56,3 +56,24 @@ func calculateTotal(items []OrderItem) money.Money {
 		Amount: total,
 	}
 }
+
+func (o Order) Status() OrderStatus{
+	return o.status
+}
+
+func (o Order) UserID() uuid.UUID{
+	return o.userID
+}
+
+func (o Order) ID() uuid.UUID{
+	return o.id
+}
+
+func (o Order) Items() []OrderItem{
+	return o.items
+}
+
+func (o Order) Total() money.Money{
+	return o.total
+}
+
