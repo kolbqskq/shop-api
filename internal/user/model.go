@@ -139,7 +139,7 @@ func (u *User) Login(password string) error {
 	if err := u.passwordHash.Compare(password); err != nil {
 		return errs.ErrInvalidCredentials
 	}
-	
+
 	if !u.isActive {
 		return errs.ErrUserInactive
 	}
@@ -171,4 +171,13 @@ func (e Email) Value() string {
 
 func (p PasswordHash) Value() string {
 	return p.value
+}
+
+func ParseRole(str string) (Role, bool) {
+	r := Role(str)
+	switch r {
+	case Default, Admin, Moderator:
+		return r, true
+	}
+	return "", false
 }

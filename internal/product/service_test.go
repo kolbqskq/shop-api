@@ -46,6 +46,10 @@ func (m *MockProductRepository) List(ctx context.Context, filters product.ListFi
 	return nil, nil
 }
 
+func (m *MockProductRepository) Save(ctx context.Context, product *product.Product) error {
+	return nil
+}
+
 func TestCreate_Success(t *testing.T) {
 	repo := &MockProductRepository{}
 	service := product.NewService(product.ServiceDeps{
@@ -219,7 +223,7 @@ func TestChangeProduct_SuccessOnlyPrice(t *testing.T) {
 func TestChangeProduct_NoFieldsToUpdate(t *testing.T) {
 	id, err := uuid.NewV7()
 	require.NoError(t, err)
-	
+
 	repo := &MockProductRepository{}
 	service := product.NewService(product.ServiceDeps{
 		Repository: repo,
@@ -230,7 +234,7 @@ func TestChangeProduct_NoFieldsToUpdate(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = service.ChangeProduct(ctx, req)
-	require.ErrorIs(t, err, errs.ErrBadRequest)
+	require.ErrorIs(t, err, errs.ErrNothingToUpdate)
 
 	require.False(t, repo.GetByIDCalled)
 	require.False(t, repo.SaveCalled)
@@ -245,7 +249,7 @@ func TestChangeProduct_NoID(t *testing.T) {
 
 	ctx := context.Background()
 	_, err := service.ChangeProduct(ctx, req)
-	require.ErrorIs(t, err, errs.ErrBadRequest)
+	require.ErrorIs(t, err, errs.ErrMissingID)
 
 	require.False(t, repo.GetByIDCalled)
 	require.False(t, repo.SaveCalled)

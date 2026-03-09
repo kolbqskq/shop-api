@@ -103,7 +103,7 @@ func TestLogin_UserExists_Success(t *testing.T) {
 	loginPassword := "12345678"
 	ctx := context.Background()
 
-	err = service.Login(ctx, loginEmail, loginPassword)
+	_, _, err = service.Login(ctx, loginEmail, loginPassword)
 	require.NoError(t, err)
 
 	require.True(t, userRepo.GetByEmailCalled)
@@ -137,7 +137,7 @@ func TestLogin_UserExists_InvalidPassword(t *testing.T) {
 	loginPassword := "1234567"
 	ctx := context.Background()
 
-	err = service.Login(ctx, loginEmail, loginPassword)
+	_, _, err = service.Login(ctx, loginEmail, loginPassword)
 	require.ErrorIs(t, err, errs.ErrInvalidCredentials)
 
 	require.True(t, userRepo.GetByEmailCalled)
@@ -157,7 +157,7 @@ func TestLogin_UserNotExists_InvalidCredentials(t *testing.T) {
 	loginPassword := "12345678"
 	ctx := context.Background()
 
-	err := service.Login(ctx, loginEmail, loginPassword)
+	_, _, err := service.Login(ctx, loginEmail, loginPassword)
 	require.ErrorIs(t, err, errs.ErrInvalidCredentials)
 
 	require.True(t, userRepo.GetByEmailCalled)
@@ -189,7 +189,7 @@ func TestLogin_UserExists_Inactive(t *testing.T) {
 	loginPassword := "12345678"
 	ctx := context.Background()
 
-	err = service.Login(ctx, loginEmail, loginPassword)
+	_, _, err = service.Login(ctx, loginEmail, loginPassword)
 	require.ErrorIs(t, err, errs.ErrUserInactive)
 
 	require.True(t, userRepo.GetByEmailCalled)

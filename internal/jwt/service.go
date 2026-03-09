@@ -2,7 +2,9 @@ package jwt
 
 import (
 	"context"
-	"errors"
+	"encoding/base64"
+	"log"
+	"shop-api/internal/errs"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,10 +12,46 @@ import (
 )
 
 type Service struct {
-	accessSecret  string
-	refreshSecret string
+	accessSecret  []byte
+	refreshSecret []byte
 	repo          IRefreshTokensRepository
 	userRepo      IUserRepository
+	txManager     ITxManager
+}
+
+type ServiceDeps struct {
+	AccessSecret            string
+	RefreshSecret           string
+	RefreshTokensRepository IRefreshTokensRepository
+	UserRepository          IUserRepository
+	TxManager               ITxManager
+}
+
+func NewService(deps ServiceDeps) *Service {
+	if deps.AccessSecret == "" {
+		log.Fatal("access secret is required")
+	}
+	if deps.RefreshSecret == "" {
+		log.Fatal("refresh secret is required")
+	}
+	if deps.AccessSecret == deps.RefreshSecret {
+		log.Fatal("access and refresh secrets must be different")
+	}
+	accessSecret, err := base64.StdEncoding.DecodeString(deps.AccessSecret)
+	if err != nil {
+		log.Fatal("invalid access secret format")
+	}
+	refreshSecret, err := base64.StdEncoding.DecodeString(deps.RefreshSecret)
+	if err != nil {
+		log.Fatal("invalid refresh secret format")
+	}
+	return &Service{
+		accessSecret:  accessSecret,
+		refreshSecret: refreshSecret,
+		repo:          deps.RefreshTokensRepository,
+		userRepo:      deps.UserRepository,
+		txManager:     deps.TxManager,
+	}
 }
 
 type AccessClaims struct {
@@ -34,7 +72,7 @@ func (s *Service) CreateAccessToken(userID uuid.UUID, role string) (string, erro
 		},
 		Role: role,
 	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.accessSecret))
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.accessSecret)
 }
 
 func (s *Service) CreateRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
@@ -46,11 +84,11 @@ func (s *Service) CreateRefreshToken(ctx context.Context, userID uuid.UUID) (str
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.refreshSecret))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.refreshSecret)
 	if err != nil {
 		return "", err
 	}
-	if err = s.repo.Save(ctx, userID, token, exp); err != nil {
+	if err = s.repo.Create(ctx, userID, token, exp); err != nil {
 		return "", err
 	}
 	return token, err
@@ -59,12 +97,12 @@ func (s *Service) CreateRefreshToken(ctx context.Context, userID uuid.UUID) (str
 func (s *Service) ValidateAccessToken(tokenStr string) (uuid.UUID, string, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &AccessClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("err")
+			return nil, errs.ErrInvalidToken
 		}
-		return []byte(s.accessSecret), nil
+		return s.accessSecret, nil
 	})
 	if err != nil || !token.Valid {
-		return uuid.Nil, "", errors.New("err")
+		return uuid.Nil, "", errs.ErrInvalidToken
 	}
 	claims := token.Claims.(*AccessClaims)
 	userID, err := uuid.Parse(claims.Subject)
@@ -74,35 +112,45 @@ func (s *Service) ValidateAccessToken(tokenStr string) (uuid.UUID, string, error
 func (s *Service) Refresh(ctx context.Context, tokenStr string) (access, refresh string, err error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &RefreshClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("err")
+			return nil, errs.ErrInvalidToken
 		}
-		return []byte(s.refreshSecret), nil
+		return s.refreshSecret, nil
 	})
 	if err != nil {
-		return "", "", errors.New("err")
+		return "", "", errs.ErrInvalidToken
 	}
 	claims := token.Claims.(*RefreshClaims)
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		return "", "", err
 	}
-	if err := s.repo.Validate(ctx, tokenStr); err != nil {
-		return "", "", err
-	}
-	if err := s.repo.Delete(ctx, tokenStr); err != nil {
-		return "", "", err
-	}
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return "", "", err
-	}
-	newAccess, err := s.CreateAccessToken(userID, string(user.Role()))
-	if err != nil {
-		return "", "", err
-	}
-	newRefresh, err := s.CreateRefreshToken(ctx, userID)
-	if err != nil {
-		return "", "", err
-	}
-	return newAccess, newRefresh, nil
+	var newAccess, newRefresh string
+
+	err = s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		if err := s.repo.Validate(ctx, tokenStr); err != nil {
+			return err
+		}
+		if err := s.repo.Delete(ctx, tokenStr); err != nil {
+			return err
+		}
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return err
+		}
+		newAccess, err = s.CreateAccessToken(userID, string(user.Role()))
+		if err != nil {
+			return err
+		}
+		newRefresh, err = s.CreateRefreshToken(ctx, userID)
+		if err != nil {
+			return err
+		}
+		return err
+	})
+
+	return newAccess, newRefresh, err
+}
+
+func (s *Service) DeleteRefresh(ctx context.Context, tokenStr string) error {
+	return s.repo.Delete(ctx, tokenStr)
 }

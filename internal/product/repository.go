@@ -99,11 +99,11 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	args := pgx.NamedArgs{
 		"id": id,
 	}
-	cmd, err := exec.Exec(ctx, query, args)
+	row, err := exec.Exec(ctx, query, args)
 	if err != nil {
 		return err
 	}
-	if cmd.RowsAffected() == 0 {
+	if row.RowsAffected() == 0 {
 		return errors.New("can not delete")
 	}
 	return nil

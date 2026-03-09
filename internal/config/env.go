@@ -42,6 +42,14 @@ func getString(key, defaultValue string) string {
 	return str
 }
 
+func getRequiredString(key string) string {
+	str := os.Getenv(key)
+	if str == "" {
+		log.Fatalf("обязательная переменная окружения не задана: %s", key)
+	}
+	return str
+}
+
 type LogConfig struct {
 	Level  int
 	Format string
@@ -62,7 +70,7 @@ type DatabaseConfig struct {
 
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
-		Url: getString("DATABASE_URL", ""),
+		Url: getRequiredString("DATABASE_URL"),
 	}
 }
 
@@ -72,6 +80,28 @@ type TestDatabaseConfig struct {
 
 func NewTestDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
-		Url: getString("TEST_DATABASE_URL", ""),
+		Url: getRequiredString("TEST_DATABASE_URL"),
+	}
+}
+
+type JWTConfig struct {
+	AccessSecret  string
+	RefreshSecret string
+}
+
+func NewJwtConfig() *JWTConfig {
+	return &JWTConfig{
+		AccessSecret:  getRequiredString("JWT_ACCESS_SECRET"),
+		RefreshSecret: getRequiredString("JWT_REFRESH_SECRET"),
+	}
+}
+
+type SetupConfig struct {
+	Key string
+}
+
+func NewSetupConfig() *SetupConfig {
+	return &SetupConfig{
+		Key: getRequiredString("SETUP_KEY"),
 	}
 }

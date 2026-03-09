@@ -65,7 +65,7 @@ func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*DTOOrd
 		for _, v := range cart.Items() {
 			product, ok := productsMap[v.ProductID]
 			if !ok {
-				return errs.ErrItemMissing
+				return errs.ErrItemNotFound
 			}
 			if err := product.Reserve(v.Quantity); err != nil {
 				return err

@@ -1,11 +1,6 @@
 package product
 
-import (
-	"github.com/google/uuid"
-)
-
 type DTOUpdateProduct struct {
-	ID          uuid.UUID
 	Name        *string
 	Description *string
 	Category    *string
@@ -15,12 +10,12 @@ type DTOUpdateProduct struct {
 }
 
 type DTOCreateProduct struct {
-	Name        string
-	Description string
-	Category    string
-	Price       int64
-	Stock       int
-	IsActive    bool
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
+	Price       int64  `json:"price"`
+	Stock       int    `json:"stock"`
+	IsActive    bool   `json:"isActive"`
 }
 
 type DTOListFilters struct {
@@ -36,7 +31,7 @@ type DTOListFilters struct {
 }
 
 type DTOProduct struct {
-	ID          uuid.UUID
+	ID          string
 	Name        string
 	Description string
 	Category    string

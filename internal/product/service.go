@@ -33,9 +33,14 @@ func (s *Service) CreateProduct(ctx context.Context, create CreateProductRequest
 }
 
 func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (*DTOProduct, error) {
-	if (upd.Name == nil && upd.Description == nil && upd.Category == nil && upd.Price == nil && upd.Stock == nil && upd.IsActive == nil) || upd.ID == uuid.Nil {
-		return nil, errs.ErrBadRequest
+	if upd.ID == uuid.Nil {
+		return nil, errs.ErrMissingID
 	}
+
+	if upd.Name == nil && upd.Description == nil && upd.Category == nil && upd.Price == nil && upd.Stock == nil && upd.IsActive == nil {
+		return nil, errs.ErrNothingToUpdate
+	}
+
 	product, err := s.repo.GetByID(ctx, upd.ID)
 	if err != nil {
 		return nil, err
@@ -68,7 +73,7 @@ func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (
 	if upd.IsActive != nil {
 		product.ChangeIsActive(*upd.IsActive)
 	}
-	return buildDTOProduct(product), s.repo.Update(ctx, product)
+	return buildDTOProduct(product), s.repo.Save(ctx, product)
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {
@@ -110,9 +115,17 @@ func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]DT
 	return buildDTOProductSlice(products), nil
 }
 
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*DTOProduct, error) {
+	product, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return buildDTOProduct(product), nil
+}
+
 func buildDTOProduct(product *Product) *DTOProduct {
 	return &DTOProduct{
-		ID:          product.id,
+		ID:          product.id.String(),
 		Name:        product.name,
 		Description: product.description,
 		Category:    product.category,

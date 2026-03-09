@@ -44,7 +44,7 @@ func (r *Repository) Create(ctx context.Context, cart *Cart) error {
 	err := exec.QueryRow(ctx, query, args).Scan(&id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errs.ErrCartAlreadyExist
+			return errs.ErrCartAlreadyExists
 		}
 		return err
 	}

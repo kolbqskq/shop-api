@@ -42,7 +42,7 @@ func (s *Service) getOrCreateActiveCart(ctx context.Context, userID uuid.UUID) (
 	}
 	cart = NewCart(id, userID)
 	if err := s.repo.Create(ctx, cart); err != nil {
-		if errors.Is(err, errs.ErrCartAlreadyExist) {
+		if errors.Is(err, errs.ErrCartAlreadyExists) {
 			return s.repo.GetActiveCart(ctx, userID)
 		}
 		return nil, err
@@ -73,7 +73,7 @@ func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uui
 		if err := s.repo.Save(ctx, cart); err != nil {
 			return err
 		}
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (s *Service) DecreaseFromCart(ctx context.Context, userID uuid.UUID, produc
 		if err := s.repo.Save(ctx, c); err != nil {
 			return err
 		}
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *Service) RemoveFromCart(ctx context.Context, userID uuid.UUID, productI
 		if err := s.repo.Save(ctx, c); err != nil {
 			return err
 		}
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (s *Service) ClearCart(ctx context.Context, userID uuid.UUID) (*DTOCart, er
 			return err
 		}
 		cart = c
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, err

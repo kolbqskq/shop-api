@@ -159,3 +159,13 @@ func (p *Product) IsActive() bool {
 func (p *Product) Available() int {
 	return p.stock - p.reserved
 }
+
+func ParseSortField(str string) (ProductSortField, bool) {
+	f := ProductSortField(str)
+
+	switch f {
+	case SortByCreatedAt, SortByName, SortByPrice, SortByStock:
+		return f, true
+	}
+	return "", false
+}
