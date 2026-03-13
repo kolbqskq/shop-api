@@ -2,10 +2,13 @@ package app
 
 import (
 	"shop-api/internal/auth"
+	"shop-api/internal/cart"
 	"shop-api/internal/config"
 	"shop-api/internal/database"
 	"shop-api/internal/jwt"
 	"shop-api/internal/middleware"
+	"shop-api/internal/order"
+	"shop-api/internal/payment"
 	"shop-api/internal/product"
 	"shop-api/internal/user"
 	"shop-api/pkg/logger"
@@ -33,7 +36,7 @@ func Run() {
 	app := gin.New()
 	app.Use(gin.Recovery())
 	app.SetTrustedProxies(nil)
-	app.Use(middleware.ErrorMiddleware())
+	app.Use(middleware.ErrorMiddleware(*logger))
 
 	//Repositories:
 	userRepository := user.NewRepository(user.RepositoryDeps{
@@ -43,6 +46,12 @@ func Run() {
 		DbPool: db,
 	})
 	productRepository := product.NewRepository(product.RepositoryDeps{
+		DbPool: db,
+	})
+	cartRepository := cart.NewRepository(cart.RepositoryDeps{
+		DbPool: db,
+	})
+	orderRepository := order.NewRepository(order.RepositoryDeps{
 		DbPool: db,
 	})
 
@@ -61,19 +70,41 @@ func Run() {
 	productService := product.NewService(product.ServiceDeps{
 		Repository: productRepository,
 	})
+	cartService := cart.NewService(cart.ServiceDeps{
+		Repository:        cartRepository,
+		ProductRepository: productRepository,
+		TxManager:         &txManager,
+	})
+	paymentService := payment.NewService()
+
+	orderService := order.NewService(order.ServiceDeps{
+		CartRepository:    cartRepository,
+		OrderRepository:   orderRepository,
+		ProductRepository: productRepository,
+		TxManager:         &txManager,
+		PaymentService:    paymentService,
+	})
 
 	//Handlers:
 	product.NewHandler(product.HandlerDeps{
 		Router:         app,
-		Logger:         *logger,
 		JwtService:     jwtService,
 		ProductService: productService,
 	})
 	auth.NewHandler(auth.HandlerDeps{
 		Router:      app,
-		Logger:      *logger,
 		AuthService: authService,
 		SetupKey:    setupConfig.Key,
+	})
+	cart.NewHandler(cart.HandlerDeps{
+		Router:      app,
+		CartService: cartService,
+		JwtService:  jwtService,
+	})
+	order.NewHandler(order.HandlerDeps{
+		Router:       app,
+		JwtService:   jwtService,
+		OrderService: orderService,
 	})
 	app.Run(":8000")
 }

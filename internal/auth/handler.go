@@ -5,19 +5,16 @@ import (
 	"shop-api/internal/errs"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 type Handler struct {
 	router      gin.IRouter
-	logger      zerolog.Logger
 	authService IAuthService
 	setupKey    string
 }
 
 type HandlerDeps struct {
 	Router      gin.IRouter
-	Logger      zerolog.Logger
 	AuthService IAuthService
 	SetupKey    string
 }
@@ -25,7 +22,6 @@ type HandlerDeps struct {
 func NewHandler(deps HandlerDeps) {
 	h := &Handler{
 		router:      deps.Router,
-		logger:      deps.Logger,
 		authService: deps.AuthService,
 		setupKey:    deps.SetupKey,
 	}

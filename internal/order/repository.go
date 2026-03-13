@@ -205,3 +205,7 @@ func (r *Repository) GetByUserID(ctx context.Context, userID uuid.UUID, limit, o
 	}
 	return res, nil
 }
+
+func (r *Repository) Save(ctx context.Context, order *Order) error {
+	return nil
+}

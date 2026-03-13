@@ -110,7 +110,7 @@ func TestCreateFromCart_CartExist_CreateOrder(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	dtoOrder, err := service.CreateFromCart(ctx, userID)
+	dtoOrder, err := service.CreateOrder(ctx, userID)
 	require.NoError(t, err)
 
 	require.NotNil(t, dtoOrder)
@@ -163,7 +163,7 @@ func TestCreateFromCart_CartEmpty_ErrEmptyCart(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	dtoOrder, err := service.CreateFromCart(ctx, userID)
+	dtoOrder, err := service.CreateOrder(ctx, userID)
 	require.ErrorIs(t, err, errs.ErrEmptyCart)
 
 	require.Nil(t, dtoOrder)
@@ -195,7 +195,7 @@ func TestCreateFromCart_CartNotExists_ErrCartNotFound(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	dtoOrder, err := service.CreateFromCart(ctx, userID)
+	dtoOrder, err := service.CreateOrder(ctx, userID)
 	require.ErrorIs(t, err, errs.ErrCartNotFound)
 
 	require.Nil(t, dtoOrder)

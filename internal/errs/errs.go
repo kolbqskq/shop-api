@@ -34,6 +34,7 @@ var (
 	ErrMissingID          = errors.New("id is required")
 	ErrUnauthorized       = errors.New("unauthorized")
 	ErrBadRequest         = errors.New("invalid request format")
+	ErrOrderNotPending    = errors.New("order is not pending")
 )
 
 type HTTPError struct {
@@ -74,9 +75,10 @@ var errToHTTP = map[error]*HTTPError{
 	ErrUserAlreadyExists: {Code: http.StatusConflict, Message: "Пользователь уже существует"},
 	ErrVersionConflict:   {Code: http.StatusConflict, Message: "Конфликт версий"},
 
-	ErrCartNotActive: {Code: http.StatusUnprocessableEntity, Message: "Корзина неактивна"},
-	ErrUnauthorized:  {Code: http.StatusUnauthorized, Message: "Неавторизован"},
-	ErrBadRequest:    {Code: http.StatusBadRequest, Message: "Неверный формат запроса"},
+	ErrCartNotActive:   {Code: http.StatusUnprocessableEntity, Message: "Корзина неактивна"},
+	ErrUnauthorized:    {Code: http.StatusUnauthorized, Message: "Неавторизован"},
+	ErrBadRequest:      {Code: http.StatusBadRequest, Message: "Неверный формат запроса"},
+	ErrOrderNotPending: {Code: http.StatusBadRequest, Message: "Статус уже обработан"},
 }
 
 func ToHTTPError(err error) *HTTPError {

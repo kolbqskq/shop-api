@@ -9,19 +9,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 )
 
 type Handler struct {
 	router         gin.IRouter
-	logger         zerolog.Logger
-	jwtService     IJWTService
 	productService IProductService
 }
 
 type HandlerDeps struct {
 	Router         gin.IRouter
-	Logger         zerolog.Logger
 	JwtService     IJWTService
 	ProductService IProductService
 }
@@ -29,8 +25,6 @@ type HandlerDeps struct {
 func NewHandler(deps HandlerDeps) {
 	h := &Handler{
 		router:         deps.Router,
-		logger:         deps.Logger,
-		jwtService:     deps.JwtService,
 		productService: deps.ProductService,
 	}
 
@@ -52,7 +46,6 @@ func (h *Handler) createProduct(c *gin.Context) {
 		c.Error(errs.ErrBadRequest)
 		return
 	}
-	h.logger.Debug().Msg("1")
 	res, err := h.productService.CreateProduct(c.Request.Context(), CreateProductRequest{
 		Name:        req.Name,
 		Description: req.Description,
@@ -62,7 +55,6 @@ func (h *Handler) createProduct(c *gin.Context) {
 		IsActive:    req.IsActive,
 	})
 	if err != nil {
-		h.logger.Debug().Msg("2")
 		c.Error(err)
 		return
 	}

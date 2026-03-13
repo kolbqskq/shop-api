@@ -21,3 +21,15 @@ type IProductRepository interface {
 type ITxManager interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+type ICartService interface {
+	AddToCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error)
+	UpdateFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error)
+	RemoveFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID) (*DTOCart, error)
+	GetActiveCart(ctx context.Context, userID uuid.UUID) (*DTOCart, error)
+	ClearCart(ctx context.Context, userID uuid.UUID) (*DTOCart, error)
+}
+
+type IJWTService interface {
+	ValidateAccessToken(tokenStr string) (uuid.UUID, string, error)
+}

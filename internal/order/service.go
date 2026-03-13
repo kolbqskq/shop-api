@@ -15,6 +15,7 @@ type Service struct {
 	orderRepo         IOrderRepository
 	productRepository IProductRepository
 	txManager         ITxManager
+	paymentService    IPaymentService
 }
 
 type ServiceDeps struct {
@@ -22,6 +23,7 @@ type ServiceDeps struct {
 	OrderRepository   IOrderRepository
 	ProductRepository IProductRepository
 	TxManager         ITxManager
+	PaymentService    IPaymentService
 }
 
 func NewService(deps ServiceDeps) *Service {
@@ -30,10 +32,11 @@ func NewService(deps ServiceDeps) *Service {
 		orderRepo:         deps.OrderRepository,
 		productRepository: deps.ProductRepository,
 		txManager:         deps.TxManager,
+		paymentService:    deps.PaymentService,
 	}
 }
 
-func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*DTOOrder, error) {
+func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID) (*DTOOrder, error) {
 	var order *Order
 
 	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
@@ -87,7 +90,7 @@ func (s *Service) CreateFromCart(ctx context.Context, userID uuid.UUID) (*DTOOrd
 	return dto, nil
 }
 
-func (s *Service) GetByID(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error) {
+func (s *Service) GetOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error) {
 	order, err := s.orderRepo.GetByID(ctx, orderID, userID)
 	if err != nil {
 		return nil, err
@@ -95,7 +98,15 @@ func (s *Service) GetByID(ctx context.Context, orderID uuid.UUID, userID uuid.UU
 	return buildDTOOrder(order), nil
 }
 
-func (s *Service) GetOrdersByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]DTOOrder, error) {
+func (s *Service) ListByUser(ctx context.Context, userID uuid.UUID, l, o *int) ([]DTOOrder, error) {
+	limit := 10
+	if l != nil && *l > 0 && *l <= 20 {
+		limit = *l
+	}
+	offset := 0
+	if o != nil && *o >= 0 {
+		offset = *o
+	}
 	orders, err := s.orderRepo.GetByUserID(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, err
@@ -105,6 +116,32 @@ func (s *Service) GetOrdersByUser(ctx context.Context, userID uuid.UUID, limit, 
 		ordersDTO = append(ordersDTO, *buildDTOOrder(v))
 	}
 	return ordersDTO, nil
+}
+
+func (s *Service) PayOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error) {
+	var order *Order
+	var err error
+
+	err = s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		order, err = s.orderRepo.GetByID(ctx, orderID, userID)
+		if err != nil {
+			return err
+		}
+		if err := s.paymentService.Pay(ctx, orderID, order.Total().Amount); err != nil {
+			return err
+		}
+		if err := order.Pay(); err != nil {
+			return err
+		}
+		if err := s.orderRepo.Save(ctx, order); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return buildDTOOrder(order), nil
 }
 
 func buildDTOOrder(order *Order) *DTOOrder {

@@ -37,7 +37,7 @@ func (r *Repository) Create(ctx context.Context, cart *Cart) error {
 	RETURNING id;
 	`
 	args := pgx.NamedArgs{
-		"id":      cart.ID,
+		"id":      cart.id,
 		"user_id": cart.userID,
 	}
 	var id uuid.UUID
@@ -66,7 +66,7 @@ func (r *Repository) Save(ctx context.Context, cart *Cart) error {
 		WHERE id = @id AND version = @version;
 	`
 	args := pgx.NamedArgs{
-		"id":      cart.ID,
+		"id":      cart.id,
 		"status":  cart.status,
 		"version": cart.version,
 	}
@@ -96,7 +96,7 @@ func (r *Repository) Save(ctx context.Context, cart *Cart) error {
 	`
 	for _, v := range cart.items {
 		args = pgx.NamedArgs{
-			"cart_id":    cart.ID,
+			"cart_id":    cart.id,
 			"product_id": v.ProductID,
 			"quantity":   v.Quantity,
 		}
@@ -137,10 +137,9 @@ func (r *Repository) GetActiveCart(ctx context.Context, userID uuid.UUID) (*Cart
 	SELECT product_id, quantity
 	FROM cart_items
 	WHERE cart_id = @cart_id
-	ORDER BY added_at;
 	`
 	args = pgx.NamedArgs{
-		"cart_id": cart.ID,
+		"cart_id": cart.id,
 	}
 	rows, err := exec.Query(ctx, query, args)
 	if err != nil {

@@ -2,6 +2,7 @@ package order
 
 import (
 	"errors"
+	"shop-api/internal/errs"
 	"shop-api/internal/money"
 	"time"
 
@@ -57,23 +58,30 @@ func calculateTotal(items []OrderItem) money.Money {
 	}
 }
 
-func (o Order) Status() OrderStatus{
+func (o Order) Status() OrderStatus {
 	return o.status
 }
 
-func (o Order) UserID() uuid.UUID{
+func (o Order) UserID() uuid.UUID {
 	return o.userID
 }
 
-func (o Order) ID() uuid.UUID{
+func (o Order) ID() uuid.UUID {
 	return o.id
 }
 
-func (o Order) Items() []OrderItem{
+func (o Order) Items() []OrderItem {
 	return o.items
 }
 
-func (o Order) Total() money.Money{
+func (o Order) Total() money.Money {
 	return o.total
 }
 
+func (o *Order) Pay() error {
+	if o.status != OrderStatusPending {
+		return errs.ErrOrderNotPending
+	}
+	o.status = OrderStatusPaid
+	return nil
+}

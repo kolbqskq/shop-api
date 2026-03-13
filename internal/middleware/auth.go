@@ -39,6 +39,7 @@ func userIDFromCtx(ctx context.Context) (uuid.UUID, bool) {
 func UserID(c *gin.Context) (uuid.UUID, bool) {
 	return userIDFromCtx(c.Request.Context())
 }
+
 func AuthMiddleware(jwtService IJWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")

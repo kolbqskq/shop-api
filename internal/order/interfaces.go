@@ -29,3 +29,18 @@ type IProductRepository interface {
 type ITxManager interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+type IOrderService interface {
+	CreateOrder(ctx context.Context, userID uuid.UUID) (*DTOOrder, error)
+	GetOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error)
+	ListByUser(ctx context.Context, userID uuid.UUID, l, o *int) ([]DTOOrder, error)
+	PayOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*DTOOrder, error)
+}
+
+type IJWTService interface {
+	ValidateAccessToken(tokenStr string) (uuid.UUID, string, error)
+}
+
+type IPaymentService interface {
+	Pay(ctx context.Context, orderID uuid.UUID, amount int64) error
+}

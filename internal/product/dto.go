@@ -15,19 +15,19 @@ type DTOCreateProduct struct {
 	Category    string `json:"category"`
 	Price       int64  `json:"price"`
 	Stock       int    `json:"stock"`
-	IsActive    bool   `json:"isActive"`
+	IsActive    bool   `json:"is_active"`
 }
 
 type DTOListFilters struct {
-	Limit    *int
-	Offset   *int
-	SortBy   *string
-	SortDesc *bool
+	Limit    *int    `form:"limit"`
+	Offset   *int    `form:"offset"`
+	SortBy   *string `form:"sort_by"`
+	SortDesc *bool   `form:"sort_desc"`
 
-	Category *string
-	MinPrice *int64
-	MaxPrice *int64
-	IsActive *bool
+	Category *string `form:"category"`
+	MinPrice *int64  `form:"min_price"`
+	MaxPrice *int64  `form:"max_price"`
+	IsActive *bool   `form:"is_active"`
 }
 
 type DTOProduct struct {

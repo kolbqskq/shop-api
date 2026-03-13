@@ -18,3 +18,12 @@ type DTOCart struct {
 	ID    uuid.UUID
 	Items []DTOCartItemView
 }
+
+type DTOAddCartItem struct {
+	ProductID string `json:"product_id"`
+	Quantity  int    `json:"quantity"`
+}
+
+type DTOUpdateCartItem struct {
+	Quantity int       `json:"quantity"`
+}

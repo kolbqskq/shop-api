@@ -263,7 +263,7 @@ func TestDecreaseFromCart_CartExist_DecreaseItem(t *testing.T) {
 		TxManager:         tx,
 	})
 	ctx := context.Background()
-	dtoCart, err := service.DecreaseFromCart(ctx, userID, productID, 7)
+	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, 7)
 	require.NoError(t, err)
 
 	require.True(t, repoCart.GetActiveCartCalled)
@@ -316,7 +316,7 @@ func TestDecreaseFromCart_CartExist_RemoveItem(t *testing.T) {
 		TxManager:         tx,
 	})
 	ctx := context.Background()
-	dtoCart, err := service.DecreaseFromCart(ctx, userID, productID, 10)
+	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, 10)
 	require.NoError(t, err)
 
 	require.True(t, repoCart.GetActiveCartCalled)
@@ -361,7 +361,7 @@ func TestDecreaseFromCart_CartExist_InvalidQuantity(t *testing.T) {
 		TxManager:         tx,
 	})
 	ctx := context.Background()
-	dtoCart, err := service.DecreaseFromCart(ctx, userID, productID, -7)
+	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, -7)
 	require.ErrorIs(t, err, errs.ErrInvalidQuantity)
 
 	require.True(t, repoCart.GetActiveCartCalled)
@@ -393,7 +393,7 @@ func TestDecreaseFromCart_NoCart_DecreaseItem(t *testing.T) {
 		TxManager:         tx,
 	})
 	ctx := context.Background()
-	dtoCart, err := service.DecreaseFromCart(ctx, userID, productID, 7)
+	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, 7)
 	require.ErrorIs(t, err, errs.ErrCartNotFound)
 
 	require.True(t, repoCart.GetActiveCartCalled)

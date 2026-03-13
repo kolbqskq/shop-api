@@ -57,21 +57,21 @@ func (c *Cart) AddItem(productID uuid.UUID, qty int) error {
 	return nil
 }
 
-func (c *Cart) DecreaseItem(productID uuid.UUID, qty int) error {
+func (c *Cart) ChangeQuantityItem(productID uuid.UUID, qty int) error {
 	if c.status != CartStatusActive {
 		return errs.ErrCartNotActive
 	}
-	if qty <= 0 {
+	if qty < 0 {
 		return errs.ErrInvalidQuantity
 	}
 	for k := range c.items {
 		if c.items[k].ProductID == productID {
-			if c.items[k].Quantity <= qty {
+			if qty == 0 {
 				c.removeByIndex(k)
 				return nil
 			}
 
-			c.items[k].Quantity -= qty
+			c.items[k].Quantity = qty
 			return nil
 		}
 	}

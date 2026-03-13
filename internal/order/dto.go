@@ -20,3 +20,8 @@ type DTOOrderItem struct {
 	Quantity  int
 	Price     int64
 }
+
+type DTOOrdersList struct {
+	Limit  *int `form:"limit"`
+	Offset *int `form:"offset"`
+}

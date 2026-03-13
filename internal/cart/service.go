@@ -81,7 +81,7 @@ func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uui
 	return s.buildDTOCart(ctx, cart)
 }
 
-func (s *Service) DecreaseFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error) {
+func (s *Service) UpdateFromCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error) {
 
 	var cart *Cart
 
@@ -90,7 +90,7 @@ func (s *Service) DecreaseFromCart(ctx context.Context, userID uuid.UUID, produc
 		if err != nil {
 			return err
 		}
-		if err := c.DecreaseItem(productID, qty); err != nil {
+		if err := c.ChangeQuantityItem(productID, qty); err != nil {
 			return err
 		}
 		cart = c
