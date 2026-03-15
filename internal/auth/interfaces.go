@@ -26,4 +26,9 @@ type IJWTService interface {
 	CreateAccessToken(userID uuid.UUID, role string) (string, error)
 	DeleteRefresh(ctx context.Context, tokenStr string) error
 	Refresh(ctx context.Context, tokenStr string) (access, refresh string, err error)
+	DeleteRefreshByUserID(ctx context.Context, userID uuid.UUID) error
+}
+
+type ITxManager interface {
+	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }

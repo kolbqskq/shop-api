@@ -43,6 +43,9 @@ func (m *MockRefreshTokensRepository) Delete(ctx context.Context, token string) 
 	m.DeletedToken = token
 	return nil
 }
+func (m *MockRefreshTokensRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	return nil
+}
 
 type MockUserRepository struct {
 	GetCalled    bool

@@ -9,16 +9,21 @@ import (
 )
 
 func NewLogger(config *config.LogConfig) *zerolog.Logger {
-	file, err := os.OpenFile(
-		config.File,
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
-		0666,
-	)
-	if err != nil {
-		log.Fatal("failed to open log file")
-	}
+	var writer zerolog.LevelWriter
+	if config.File != "" {
+		file, err := os.OpenFile(
+			config.File,
+			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+			0666,
+		)
+		if err != nil {
+			log.Fatal("failed to open log file")
+		}
 
-	writer := zerolog.MultiLevelWriter(os.Stderr, file)
+		writer = zerolog.MultiLevelWriter(os.Stderr, file)
+	} else {
+		writer = zerolog.MultiLevelWriter(os.Stderr)
+	}
 
 	zerolog.SetGlobalLevel(zerolog.Level(config.Level))
 	var logger zerolog.Logger

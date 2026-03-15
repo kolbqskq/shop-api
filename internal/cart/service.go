@@ -52,13 +52,15 @@ func (s *Service) getOrCreateActiveCart(ctx context.Context, userID uuid.UUID) (
 }
 
 func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uuid.UUID, qty int) (*DTOCart, error) {
-	if _, err := s.productRepo.GetByID(ctx, productID); err != nil {
+	p, err := s.productRepo.GetByID(ctx, productID)
+	if err != nil {
 		return nil, err
 	}
-
+	if !p.IsActive() {
+		return nil, errs.ErrProductNotFound
+	}
 	var cart *Cart
-
-	err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
+	err = s.txManager.WithTx(ctx, func(ctx context.Context) error {
 		if _, err := s.productRepo.GetByID(ctx, productID); err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package errs
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -22,7 +23,6 @@ var (
 
 	ErrCartAlreadyExists  = errors.New("cart already exists")
 	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrNotEnoughStock     = errors.New("not enough stock")
 	ErrEmptyCart          = errors.New("cart is empty")
 	ErrCartNotActive      = errors.New("cart is not active")
 	ErrNoPermission       = errors.New("permission denied")
@@ -53,10 +53,9 @@ var errToHTTP = map[error]*HTTPError{
 	ErrInvalidEmail:    {Code: http.StatusBadRequest, Message: "Недопустимая почта"},
 	ErrInvalidRole:     {Code: http.StatusBadRequest, Message: "Недопустимая роль"},
 	ErrInvalidPassword: {Code: http.StatusBadRequest, Message: "Недопустимый пароль"},
-	ErrNotEnoughStock:  {Code: http.StatusBadRequest, Message: "Недостаточно товара на складе"},
 	ErrEmptyCart:       {Code: http.StatusBadRequest, Message: "Корзина пуста"},
 	ErrNothingToUpdate: {Code: http.StatusBadRequest, Message: "Нет данных для обновления"},
-	ErrMissingID:       {Code: http.StatusBadRequest, Message: "Идентификатор обязателен"},
+	ErrMissingID:       {Code: http.StatusBadRequest, Message: "Неверный формат запроса"},
 
 	ErrInvalidCredentials: {Code: http.StatusUnauthorized, Message: "Неверные учётные данные"},
 	ErrInvalidToken:       {Code: http.StatusUnauthorized, Message: "Неверный токен"},
@@ -66,14 +65,14 @@ var errToHTTP = map[error]*HTTPError{
 
 	ErrCartNotFound:    {Code: http.StatusNotFound, Message: "Корзина не найдена"},
 	ErrOrderNotFound:   {Code: http.StatusNotFound, Message: "Заказ не найден"},
-	ErrItemNotFound:    {Code: http.StatusNotFound, Message: "Элемент не найден"},
+	ErrItemNotFound:    {Code: http.StatusNotFound, Message: "Товар не найден в корзине"},
 	ErrProductNotFound: {Code: http.StatusNotFound, Message: "Продукт не найден"},
 	ErrUserNotFound:    {Code: http.StatusNotFound, Message: "Пользователь не найден"},
-	ErrTokenNotFound:   {Code: http.StatusNotFound, Message: "Токен не найден"},
+	ErrTokenNotFound:   {Code: http.StatusUnauthorized, Message: "Неавторизован"},
 
 	ErrCartAlreadyExists: {Code: http.StatusConflict, Message: "Корзина уже существует"},
 	ErrUserAlreadyExists: {Code: http.StatusConflict, Message: "Пользователь уже существует"},
-	ErrVersionConflict:   {Code: http.StatusConflict, Message: "Конфликт версий"},
+	ErrVersionConflict:   {Code: http.StatusConflict, Message: "Данные изменились, попробуйте снова"},
 
 	ErrCartNotActive:   {Code: http.StatusUnprocessableEntity, Message: "Корзина неактивна"},
 	ErrUnauthorized:    {Code: http.StatusUnauthorized, Message: "Неавторизован"},
@@ -82,9 +81,39 @@ var errToHTTP = map[error]*HTTPError{
 }
 
 func ToHTTPError(err error) *HTTPError {
+	var domainErr *DomainError
+	if errors.As(err, &domainErr) {
+		return &HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: domainErr.Message,
+		}
+	}
 	httpErr, ok := errToHTTP[err]
 	if ok {
 		return httpErr
 	}
 	return &HTTPError{Code: http.StatusInternalServerError, Message: "internal server error"}
+}
+
+type DomainError struct {
+	Code    string
+	Message string
+}
+
+func (e *DomainError) Error() string {
+	return e.Message
+}
+
+func NewNotEnoughStock(productName string, available, requested int) *DomainError {
+	return &DomainError{
+		Code:    "not_enough_stock",
+		Message: fmt.Sprintf("Недостаточно товара %s: доступно %d, запрошено %d", productName, available, requested),
+	}
+}
+
+func NewProductUnavailable(productName string) *DomainError {
+	return &DomainError{
+		Code:    "product_unavailable",
+		Message: fmt.Sprintf("Товар %s недоступен", productName),
+	}
 }

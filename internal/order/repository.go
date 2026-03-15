@@ -54,7 +54,7 @@ func (r *Repository) Create(ctx context.Context, order *Order) error {
 		batch.Queue(`
 			INSERT INTO order_items (order_id, product_id, name, quantity, price)
 			VALUES ($1, $2, $3, $4, $5)
-		`, order.id, v.ProductID, v.Name, v.Quantity, v.Price)
+		`, order.id, v.ProductID, v.Name, v.Quantity, v.Price.Amount)
 	}
 
 	br := tx.SendBatch(ctx, batch)
@@ -207,5 +207,28 @@ func (r *Repository) GetByUserID(ctx context.Context, userID uuid.UUID, limit, o
 }
 
 func (r *Repository) Save(ctx context.Context, order *Order) error {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+	UPDATE orders
+	SET 
+		status = @status,
+		version = version + 1
+	WHERE id = @id AND version = @version
+	`
+	args := pgx.NamedArgs{
+		"id":      order.id,
+		"status":  order.status,
+		"version": order.version,
+	}
+
+	row, err := exec.Exec(ctx, query, args)
+	if err != nil {
+		return err
+	}
+	if row.RowsAffected() == 0 {
+		return errs.ErrVersionConflict
+	}
 	return nil
 }

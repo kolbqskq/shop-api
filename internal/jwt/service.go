@@ -154,3 +154,7 @@ func (s *Service) Refresh(ctx context.Context, tokenStr string) (access, refresh
 func (s *Service) DeleteRefresh(ctx context.Context, tokenStr string) error {
 	return s.repo.Delete(ctx, tokenStr)
 }
+
+func (s *Service) DeleteRefreshByUserID(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.DeleteByUserID(ctx, userID)
+}

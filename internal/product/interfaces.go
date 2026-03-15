@@ -2,6 +2,7 @@ package product
 
 import (
 	"context"
+	"shop-api/internal/user"
 
 	"github.com/google/uuid"
 )
@@ -26,6 +27,6 @@ type IProductService interface {
 	CreateProduct(ctx context.Context, create CreateProductRequest) (*DTOProduct, error)
 	ChangeProduct(ctx context.Context, upd UpdateProductRequest) (*DTOProduct, error)
 	DeleteProduct(ctx context.Context, id uuid.UUID) error
-	GetList(ctx context.Context, filters ListFiltersRequest) ([]DTOProduct, error)
+	GetList(ctx context.Context, filters ListFiltersRequest, role user.Role) ([]DTOProduct, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*DTOProduct, error)
 }

@@ -36,6 +36,7 @@ func NewHandler(deps HandlerDeps) {
 	admin.DELETE("/:id", h.deleteProduct)
 
 	public := h.router.Group("/products")
+	public.Use(middleware.OptionalAuthMiddleware(deps.JwtService))
 	public.GET("/", h.getList)
 	public.GET("/:id", h.getProduct)
 }
@@ -105,6 +106,8 @@ func (h *Handler) deleteProduct(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 func (h *Handler) getList(c *gin.Context) {
+	role, _ := middleware.Role(c)
+
 	var req DTOListFilters
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.Error(errs.ErrBadRequest)
@@ -120,7 +123,7 @@ func (h *Handler) getList(c *gin.Context) {
 		MaxPrice: req.MaxPrice,
 		IsActive: req.IsActive,
 	}
-	res, err := h.productService.GetList(c.Request.Context(), filters)
+	res, err := h.productService.GetList(c.Request.Context(), filters, role)
 	if err != nil {
 		c.Error(err)
 		return

@@ -60,7 +60,7 @@ func NewLoggerConfig() *LogConfig {
 	return &LogConfig{
 		Level:  getInt("LOG_LEVEL", 0),
 		Format: getString("LOG_FORMAT", "json"),
-		File:   getString("LOG_FILE", "logs/app.log"),
+		File:   getString("LOG_FILE", ""),
 	}
 }
 

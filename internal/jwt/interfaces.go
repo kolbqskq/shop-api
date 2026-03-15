@@ -12,6 +12,7 @@ type IRefreshTokensRepository interface {
 	Create(ctx context.Context, userID uuid.UUID, token string, exp time.Time) error
 	Validate(ctx context.Context, token string) error
 	Delete(ctx context.Context, token string) error
+	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
 }
 
 type IUserRepository interface {

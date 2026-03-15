@@ -93,3 +93,22 @@ func (r *Repository) Delete(ctx context.Context, token string) error {
 	}
 	return nil
 }
+
+func (r *Repository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	exec := database.Executor(ctx, r.dbPool)
+
+	query :=
+		`
+		DELETE FROM refresh_tokens WHERE user_id = @user_id
+	`
+	args := pgx.NamedArgs{
+		"user_id": userID,
+	}
+
+	_, err := exec.Exec(ctx, query, args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

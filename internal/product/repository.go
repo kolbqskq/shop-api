@@ -61,6 +61,7 @@ func (r *Repository) Save(ctx context.Context, product *Product) error {
 		category = @category,
 		price = @price,
 		stock = @stock,
+		reserved = @reserved,
 		is_active = @is_active,
 		updated_at = NOW(),
 		version = version + 1
@@ -74,6 +75,7 @@ func (r *Repository) Save(ctx context.Context, product *Product) error {
 		"category":    product.category,
 		"price":       product.price.Amount,
 		"stock":       product.stock,
+		"reserved":    product.reserved,
 		"is_active":   product.isActive,
 		"version":     product.version,
 	}
@@ -272,5 +274,6 @@ func (r *Repository) List(ctx context.Context, filters ListFilters) ([]Product, 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return result, nil
 }

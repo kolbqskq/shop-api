@@ -118,7 +118,7 @@ func (p *Product) ChangeIsActive(isActive bool) {
 
 func (p *Product) Reserve(qty int) error {
 	if qty > p.stock-p.reserved {
-		return errs.ErrNotEnoughStock
+		return errs.NewNotEnoughStock(p.name, p.Available(), qty)
 	}
 	p.reserved += qty
 	return nil

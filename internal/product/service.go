@@ -3,6 +3,7 @@ package product
 import (
 	"context"
 	"shop-api/internal/errs"
+	"shop-api/internal/user"
 
 	"github.com/google/uuid"
 )
@@ -80,7 +81,11 @@ func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest) ([]DTOProduct, error) {
+func (s *Service) GetList(ctx context.Context, filters ListFiltersRequest, role user.Role) ([]DTOProduct, error) {
+	if role != user.Admin {
+		active := true
+		filters.IsActive = &active
+	}
 	limit := 20
 	if filters.Limit != nil && *filters.Limit > 0 && *filters.Limit <= 100 {
 		limit = *filters.Limit

@@ -1,6 +1,10 @@
 package app
 
 import (
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
 	"shop-api/internal/auth"
 	"shop-api/internal/cart"
 	"shop-api/internal/config"
@@ -12,6 +16,8 @@ import (
 	"shop-api/internal/product"
 	"shop-api/internal/user"
 	"shop-api/pkg/logger"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -66,6 +72,8 @@ func Run() {
 	authService := auth.NewService(auth.ServiceDeps{
 		UserRepository: userRepository,
 		JWTService:     jwtService,
+		TxManager:      &txManager,
+		Logger:         logger.With().Str("service", "user").Logger(),
 	})
 	productService := product.NewService(product.ServiceDeps{
 		Repository: productRepository,
@@ -106,5 +114,25 @@ func Run() {
 		JwtService:   jwtService,
 		OrderService: orderService,
 	})
-	app.Run(":8000")
+	server := &http.Server{
+		Addr:    ":8000",
+		Handler: app,
+	}
+
+	go func() {
+		logger.Info().Str("addr", server.Addr).Msg("server started")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal().Err(err).Msg("server error")
+		}
+	}()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error().Err(err).Msg("server shutdown error")
+	}
+	logger.Info().Msg("server stopped")
 }

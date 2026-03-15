@@ -69,3 +69,32 @@ func AuthMiddleware(jwtService IJWTService) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func OptionalAuthMiddleware(jwtService IJWTService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		if !strings.HasPrefix(header, "Bearer ") {
+			c.Next()
+			return
+		}
+		token := strings.TrimPrefix(header, "Bearer ")
+
+		id, roleStr, err := jwtService.ValidateAccessToken(token)
+		if err != nil {
+			c.Next()
+			return
+		}
+		role, ok := user.ParseRole(roleStr)
+		if !ok {
+			c.Error(errs.ErrInvalidRole)
+			c.Abort()
+			return
+		}
+		ctx := c.Request.Context()
+		ctx = contextWithUserID(ctx, id)
+		ctx = contextWithRole(ctx, role)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+

@@ -70,6 +70,9 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID) (*DTOOrder,
 			if !ok {
 				return errs.ErrItemNotFound
 			}
+			if !product.IsActive() {
+				return errs.NewProductUnavailable(product.Name())
+			}
 			if err := product.Reserve(v.Quantity); err != nil {
 				return err
 			}
