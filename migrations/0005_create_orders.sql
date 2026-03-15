@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE orders (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
@@ -9,3 +9,6 @@ CREATE TABLE orders (
 
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- +goose Down
+DROP TABLE orders;

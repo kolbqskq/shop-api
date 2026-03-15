@@ -74,7 +74,10 @@ func (s *Service) ChangeProduct(ctx context.Context, upd UpdateProductRequest) (
 	if upd.IsActive != nil {
 		product.ChangeIsActive(*upd.IsActive)
 	}
-	return buildDTOProduct(product), s.repo.Save(ctx, product)
+	if err := s.repo.Save(ctx, product); err != nil {
+		return nil, err
+	}
+	return buildDTOProduct(product), nil
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {

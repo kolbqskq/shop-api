@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE cart_items (
     cart_id UUID NOT NULL,
     product_id UUID NOT NULL,
@@ -9,3 +9,6 @@ CREATE TABLE cart_items (
     FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+
+-- +goose Down
+DROP TABLE cart_items;

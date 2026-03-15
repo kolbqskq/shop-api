@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE carts (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
@@ -10,5 +10,7 @@ CREATE TABLE carts (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
---CreateIndex
 CREATE UNIQUE INDEX idx_uniq_active_cart_per_user ON carts(user_id) WHERE status = 'active';
+
+-- +goose Down
+DROP TABLE carts;

@@ -45,3 +45,15 @@ docker-compose up -d --build
 - `GET /orders` — список заказов
 - `GET /orders/:id` — заказ
 - `POST /orders/:id/pay` — оплатить
+
+## Миграции
+
+Применить все миграции:
+```bash
+go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$DATABASE_URL" up
+```
+
+Откатить все:
+```bash
+go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$DATABASE_URL" down-to 0
+```

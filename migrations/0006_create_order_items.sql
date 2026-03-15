@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE order_items (
     order_id UUID NOT NULL,
     product_id UUID NOT NULL,
@@ -10,3 +10,6 @@ CREATE TABLE order_items (
 
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
+
+-- +goose Down
+DROP TABLE order_items;

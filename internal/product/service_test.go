@@ -47,6 +47,8 @@ func (m *MockProductRepository) List(ctx context.Context, filters product.ListFi
 }
 
 func (m *MockProductRepository) Save(ctx context.Context, product *product.Product) error {
+	m.SaveCalled = true
+	m.ProductSaved = product
 	return nil
 }
 
@@ -154,6 +156,7 @@ func TestChangeProduct_Success(t *testing.T) {
 
 	require.True(t, repo.GetByIDCalled)
 	require.True(t, repo.SaveCalled)
+	require.NotNil(t, repo.ProductSaved)
 
 	require.Equal(t, name, repo.ProductSaved.Name())
 	require.Equal(t, description, repo.ProductSaved.Description())
@@ -162,7 +165,7 @@ func TestChangeProduct_Success(t *testing.T) {
 	require.Equal(t, stock, repo.ProductSaved.Stock())
 	require.Equal(t, isActive, repo.ProductSaved.IsActive())
 
-	require.Equal(t, id, dto.ID)
+	require.Equal(t, id.String(), dto.ID)
 	require.Equal(t, name, dto.Name)
 	require.Equal(t, description, dto.Description)
 	require.Equal(t, category, dto.Category)
@@ -211,7 +214,7 @@ func TestChangeProduct_SuccessOnlyPrice(t *testing.T) {
 
 	require.Equal(t, price.Amount, dto.Price)
 
-	require.Equal(t, id, dto.ID)
+	require.Equal(t, id.String(), dto.ID)
 	require.Equal(t, beforeName, dto.Name)
 	require.Equal(t, beforeDescription, dto.Description)
 	require.Equal(t, beforeCategory, dto.Category)

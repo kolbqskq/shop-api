@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -13,5 +13,7 @@ CREATE TABLE users (
     version BIGINT NOT NULL DEFAULT 0
 );
 
---CreateIndex
 CREATE INDEX idx_users_email ON users(email);
+
+-- +goose Down
+DROP TABLE users;

@@ -61,9 +61,6 @@ func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uui
 	}
 	var cart *Cart
 	err = s.txManager.WithTx(ctx, func(ctx context.Context) error {
-		if _, err := s.productRepo.GetByID(ctx, productID); err != nil {
-			return err
-		}
 		c, err := s.getOrCreateActiveCart(ctx, userID)
 		if err != nil {
 			return err
@@ -72,14 +69,17 @@ func (s *Service) AddToCart(ctx context.Context, userID uuid.UUID, productID uui
 			return err
 		}
 		cart = c
-		if err := s.repo.Save(ctx, cart); err != nil {
-			return err
-		}
-		return err
+
+		return s.repo.Save(ctx, cart)
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	if cart == nil {
+		return nil, errors.New("cart not created")
+	}
+
 	return s.buildDTOCart(ctx, cart)
 }
 
@@ -120,10 +120,8 @@ func (s *Service) RemoveFromCart(ctx context.Context, userID uuid.UUID, productI
 			return err
 		}
 		cart = c
-		if err := s.repo.Save(ctx, c); err != nil {
-			return err
-		}
-		return err
+
+		return s.repo.Save(ctx, c)
 	})
 	if err != nil {
 		return nil, err

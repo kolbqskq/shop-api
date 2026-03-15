@@ -1,4 +1,4 @@
---CreateTable
+-- +goose Up
 CREATE TABLE products (
     id UUID PRIMARY KEY,
     name VARCHAR(20) NOT NULL,
@@ -13,3 +13,11 @@ CREATE TABLE products (
     created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_products_created_at ON products(created_at DESC);
+CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX idx_products_price ON products(price);
+CREATE INDEX idx_products_is_active ON products(is_active);
+
+-- +goose Down
+DROP TABLE products;

@@ -12,6 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type MockTx struct {
+}
+
+func (m *MockTx) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
+}
+
 type MockUserRepository struct {
 	GetByEmailCalled bool
 	CreateCalled     bool
@@ -35,6 +42,31 @@ func (m *MockUserRepository) Save(ctx context.Context, user *user.User) error {
 func (m *MockUserRepository) GetByEmail(ctx context.Context, email user.Email) (*user.User, error) {
 	m.GetByEmailCalled = true
 	return m.UserToReturn, m.GetErr
+}
+
+type MockJWTService struct {
+	CreateAccessCalled      bool
+	DeleteRefreshByIDCalled bool
+	CreateRefreshCalled     bool
+}
+
+func (m *MockJWTService) CreateRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
+	m.CreateRefreshCalled = true
+	return "", nil
+}
+func (m *MockJWTService) CreateAccessToken(userID uuid.UUID, role string) (string, error) {
+	m.CreateAccessCalled = true
+	return "", nil
+}
+func (m *MockJWTService) DeleteRefresh(ctx context.Context, tokenStr string) error {
+	return nil
+}
+func (m *MockJWTService) Refresh(ctx context.Context, tokenStr string) (access, refresh string, err error) {
+	return "", "", nil
+}
+func (m *MockJWTService) DeleteRefreshByUserID(ctx context.Context, userID uuid.UUID) error {
+	m.DeleteRefreshByIDCalled = true
+	return nil
 }
 
 func TestRegister_UserNotExists_Create(t *testing.T) {
@@ -96,8 +128,12 @@ func TestLogin_UserExists_Success(t *testing.T) {
 		GetErr:       nil,
 		UserToReturn: u,
 	}
+	txManager := &MockTx{}
+	jwtService := &MockJWTService{}
 	service := auth.NewService(auth.ServiceDeps{
 		UserRepository: userRepo,
+		JWTService:     jwtService,
+		TxManager:      txManager,
 	})
 	loginEmail := "Test@gmail.com"
 	loginPassword := "12345678"
@@ -108,6 +144,9 @@ func TestLogin_UserExists_Success(t *testing.T) {
 
 	require.True(t, userRepo.GetByEmailCalled)
 	require.True(t, userRepo.SaveCalled)
+	require.True(t, jwtService.CreateAccessCalled)
+	require.True(t, jwtService.CreateRefreshCalled)
+	require.True(t, jwtService.DeleteRefreshByIDCalled)
 
 	require.NotNil(t, userRepo.UserSaved)
 	require.NotNil(t, userRepo.UserSaved.LastLoginAt())

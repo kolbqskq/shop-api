@@ -51,6 +51,7 @@ type MockRepoProduct struct {
 
 	GetErr           error
 	ProductsToReturn []product.Product
+	ProductTOReturn  *product.Product
 }
 
 func (m *MockRepoProduct) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]product.Product, error) {
@@ -59,7 +60,7 @@ func (m *MockRepoProduct) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]prod
 }
 
 func (m *MockRepoProduct) GetByID(ctx context.Context, id uuid.UUID) (*product.Product, error) {
-	return nil, nil
+	return m.ProductTOReturn, nil
 }
 
 func TestGetActiveCart_ReturnsCartWithItems(t *testing.T) {
@@ -161,6 +162,7 @@ func TestAddToCart_ExistCart_AddItem(t *testing.T) {
 	}
 	repoProduct := &MockRepoProduct{
 		ProductsToReturn: []product.Product{*p, *p2},
+		ProductTOReturn:  p2,
 	}
 
 	tx := &MockTx{}
@@ -207,6 +209,7 @@ func TestAddToCart_NoCart_AddItem(t *testing.T) {
 	}
 	repoProduct := &MockRepoProduct{
 		ProductsToReturn: []product.Product{*p},
+		ProductTOReturn:  p,
 	}
 
 	tx := &MockTx{}
@@ -277,16 +280,16 @@ func TestDecreaseFromCart_CartExist_DecreaseItem(t *testing.T) {
 	require.Len(t, dtoCart.Items, 1)
 	require.Len(t, repoCart.CartSaved.Items(), 1)
 
-	require.Equal(t, 3, dtoCart.Items[0].Quantity)
+	require.Equal(t, 7, dtoCart.Items[0].Quantity)
 	require.Equal(t, cartID, dtoCart.ID)
 	require.Equal(t, productID, dtoCart.Items[0].ProductID)
 
-	require.Equal(t, 3, repoCart.CartSaved.Items()[0].Quantity)
+	require.Equal(t, 7, repoCart.CartSaved.Items()[0].Quantity)
 	require.Equal(t, cartID, repoCart.CartSaved.ID())
 	require.Equal(t, productID, repoCart.CartSaved.Items()[0].ProductID)
 }
 
-func TestDecreaseFromCart_CartExist_RemoveItem(t *testing.T) {
+func TestUpdateFromCart_CartExist_RemoveItem(t *testing.T) {
 	cartID, err := uuid.NewV7()
 	require.NoError(t, err)
 
@@ -316,7 +319,7 @@ func TestDecreaseFromCart_CartExist_RemoveItem(t *testing.T) {
 		TxManager:         tx,
 	})
 	ctx := context.Background()
-	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, 10)
+	dtoCart, err := service.UpdateFromCart(ctx, userID, productID, 0)
 	require.NoError(t, err)
 
 	require.True(t, repoCart.GetActiveCartCalled)
@@ -416,30 +419,24 @@ func TestRemoveFromCart_CartExist_RemoveItem(t *testing.T) {
 	require.NoError(t, err)
 
 	c := cart.NewCart(cartID, userID)
-	p, err := product.NewProduct(productID, "test", "test", "test", money.Money{Amount: 100}, 10, true)
-	require.NoError(t, err)
 	c.AddItem(productID, 10)
 
 	repoCart := &MockRepoCart{
 		CartToReturn: c,
-	}
-	repoProduct := &MockRepoProduct{
-		ProductsToReturn: []product.Product{*p},
 	}
 
 	tx := &MockTx{}
 
 	service := cart.NewService(cart.ServiceDeps{
 		Repository:        repoCart,
-		ProductRepository: repoProduct,
 		TxManager:         tx,
 	})
+	
 	ctx := context.Background()
 	dtoCart, err := service.RemoveFromCart(ctx, userID, productID)
 	require.NoError(t, err)
 
 	require.True(t, repoCart.GetActiveCartCalled)
-	require.False(t, repoProduct.GetByIDsCalled)
 	require.True(t, repoCart.SaveCalled)
 
 	require.NotNil(t, repoCart.CartSaved)
