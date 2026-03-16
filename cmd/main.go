@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"shop-api/internal/app"
+	"shop-api/internal/core"
 	"syscall"
 	"time"
 )
