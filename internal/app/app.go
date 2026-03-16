@@ -1,10 +1,7 @@
 package app
 
 import (
-	"context"
 	"net/http"
-	"os"
-	"os/signal"
 	"shop-api/internal/auth"
 	"shop-api/internal/cart"
 	"shop-api/internal/config"
@@ -16,13 +13,11 @@ import (
 	"shop-api/internal/product"
 	"shop-api/internal/user"
 	"shop-api/pkg/logger"
-	"syscall"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Run() {
+func Run() *http.Server {
 	//Config:
 	config.Init()
 	loggerConfig := config.NewLoggerConfig()
@@ -34,7 +29,7 @@ func Run() {
 	logger := logger.NewLogger(loggerConfig)
 
 	//Database:
-	db := database.CreateDbPool(databaseConfig, logger)
+	db := database.CreateDbPool(databaseConfig.Url, logger)
 	defer db.Close()
 	txManager := database.NewDbTransactionManager(db)
 
@@ -125,14 +120,6 @@ func Run() {
 			logger.Fatal().Err(err).Msg("server error")
 		}
 	}()
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Error().Err(err).Msg("server shutdown error")
-	}
-	logger.Info().Msg("server stopped")
+	
+	return server
 }

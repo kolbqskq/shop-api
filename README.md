@@ -3,11 +3,13 @@
 REST API для интернет-магазина на Go.
 
 ## Стек
-- Go 1.25
+- Go 1.25.6
 - PostgreSQL 17
 - Gin
 - JWT авторизация
 - Docker
+- zerolog
+- pgx
 
 ## Запуск
 
@@ -16,6 +18,17 @@ REST API для интернет-магазина на Go.
 3. Запустить:
 ```bash
 docker-compose up -d --build
+```
+4. Применить миграции:
+```bash
+make migrate-up
+```
+
+## Makefile
+```bash
+make service-run   # запустить локально
+make migrate-up    # применить миграции
+make migrate-down  # откатить все миграции
 ```
 
 ## API
@@ -45,15 +58,3 @@ docker-compose up -d --build
 - `GET /orders` — список заказов
 - `GET /orders/:id` — заказ
 - `POST /orders/:id/pay` — оплатить
-
-## Миграции
-
-Применить все миграции:
-```bash
-go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$DATABASE_URL" up
-```
-
-Откатить все:
-```bash
-go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$DATABASE_URL" down-to 0
-```

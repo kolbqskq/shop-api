@@ -2,18 +2,17 @@ package database
 
 import (
 	"context"
-	"shop-api/internal/config"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 )
 
-func CreateDbPool(config *config.DatabaseConfig, logger *zerolog.Logger) *pgxpool.Pool {
+func CreateDbPool(url string, logger *zerolog.Logger) *pgxpool.Pool {
 	var dbPool *pgxpool.Pool
 	var err error
 	for i := 0; i < 5; i++ {
-		dbPool, err = pgxpool.New(context.Background(), config.Url)
+		dbPool, err = pgxpool.New(context.Background(), url)
 		if err == nil {
 			logger.Info().Msg("Подключились к базе данных")
 			return dbPool
